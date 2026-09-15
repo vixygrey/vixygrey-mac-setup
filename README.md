@@ -195,7 +195,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **stu** | S3 TUI -- browse/preview/download buckets |
 | **claws** | Broad all-AWS TUI with a managed palette and a read-only shell default |
 | **s5cmd** | Massively parallel S3 CLI -- 10-30x faster than `aws s3` for bulk |
-| **steampipe** | Query live AWS with SQL (inventory & posture); `steampipe plugin install aws` |
 | **dynein** | Ergonomic DynamoDB CLI (awslabs) -- shorthand ops, import/export |
 | **iamlive** | Generate least-privilege IAM policies from observed API calls (tap) |
 
@@ -205,7 +204,6 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 
 | Tool | Description |
 |------|-------------|
-| **terraform-docs** | Auto-generate module README sections from variables and outputs |
 | **checkov** | IaC static analysis -- Terraform, CloudFormation, Kubernetes, Dockerfile |
 | _tfsec_ | _Folded into `trivy config` -- not installed separately_ |
 
@@ -237,20 +235,15 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | `cat` | **bat** | Syntax highlighting, line numbers, git integration |
 | `find` | **fd** | Simpler syntax, faster, respects `.gitignore` |
 | `grep` | **ripgrep** | 10x faster search, `.gitignore`-aware, Unicode support |
-| `cd` | **zoxide** | Learns your most-used directories, fuzzy jump |
 | `diff` | **delta** | Syntax-highlighted diffs with side-by-side view |
 | `diff` (code) | **difftastic** | Structural diff that understands code syntax |
-| `man` | **tldr** (tlrc) | Community-driven simplified man pages with examples |
 | `top` | **btop** | Modern resource monitor with graphs and mouse support |
 | `sed` | **sd** | Intuitive find and replace with simpler regex syntax |
-| `cut`/`awk` | **choose** | Simple column selection with negative indexing |
-| `du` | **dust** | Visual disk usage tree with bar charts |
 | `df` | **duf** | Colorful disk usage table with smart formatting |
 | `ps` | **procs** | Sortable process list with tree view, Docker-aware |
 | `ping` | **gping** | Real-time latency graph for multiple hosts |
 | `curl` | **xh** | Colorized HTTP client with JSON shortcuts |
 | `dig` | **doggo** | Colorized DNS lookup with DoH/DoT support |
-| `wc` (code) | **scc** | Count lines of code by language + complexity + COCOMO cost estimate |
 | `watch` | **viddy** | Modern watch with diff highlighting and history |
 | `hexdump` | **hexyl** | Colorized hex viewer with ASCII sidebar |
 | `curl`/`wget` | **aria2** | Multi-connection parallel downloads, 3-10x faster, BitTorrent |
@@ -270,14 +263,12 @@ Faster, prettier, smarter replacements for standard Unix utilities.
 | Tool | Description |
 |------|-------------|
 | **yq** | jq for YAML -- parse and manipulate YAML files (essential for k8s/CDK) |
-| **csvkit** | Suite of CSV tools -- csvcut, csvgrep, csvstat, csvlook |
 | **jc** | Convert many classic CLI outputs into JSON so they pipe cleanly into `jq` and automation |
 | **jqp** | Interactive jq playground / TUI -- explore JSON while iterating on jq filters |
 | **pandoc** | Universal document converter -- Markdown to PDF, DOCX, HTML, etc. |
 | **tectonic** | Self-contained LaTeX/PDF engine so pandoc can render PDFs (`pandoc in.md -o out.pdf --pdf-engine=tectonic`) -- a bare Mac has no PDF engine |
 | **poppler** | PDF tools -- `pdftoppm` (PDF→PNG), `pdftotext`, `pdfinfo` |
 | **imagemagick** | Image manipulation CLI -- resize, convert, composite, watermark |
-| **yt-dlp** | Video/audio downloader for YouTube and hundreds of other sites |
 
 ---
 
@@ -335,7 +326,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | Tool | Description |
 |------|-------------|
 | **ngrok** | Expose localhost to the internet for webhooks and demos |
-| **miniserve** | Instant file server from any directory -- one command |
 
 ---
 
@@ -346,12 +336,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **Caligula** | Disk imaging TUI with verification and compressed-image support |
 | **Nerdlog** | Multi-host log viewer with live filtering, histograms, and OpenSSH transport |
 | **Emeraldian** | Obsidian vault TUI with live preview, backlinks, graph views, and an optional assistant |
-| **Watchtower** | Global news, markets, weather, and optional model-generated intelligence briefs |
-| **leaf** | Terminal Markdown previewer -- live watch, fuzzy picker, Mermaid/LaTeX, inline mode |
-| **mprocs** | TUI for running multiple dev processes side by side -- frontend/backend/worker/watchers in one terminal surface |
-| **broot** | Directory tree and file-navigation TUI with the shell-integrated `br` launcher |
-| **watchexec** | Run commands on file changes -- supports globs, debouncing, process groups |
-| **pv** | Pipe viewer -- add progress bars to any piped command |
 | **gum** | Shell script UI toolkit -- pretty prompts, spinners, confirmations |
 | **topgrade** | Update supported package managers and system components from one command |
 | **fastfetch** | Quick system info display -- faster neofetch replacement |
@@ -360,7 +344,6 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **qalc** | Powerful terminal calculator (units, currencies, variables) |
 | **lazyssh** | TUI SSH connection manager |
 | **eilmeldung** | Fast RSS reader with vim-style navigation and a Dracula-Sakura palette |
-| **concord** | Discord terminal client with Keychain tokens and opt-in microphone transmission |
 | **cfait** | Offline-first task manager with optional CalDAV synchronization |
 
 ---
@@ -492,7 +475,6 @@ The setup merges schema-derived defaults for every configurable extension. It di
 | App | Description |
 |-----|-------------|
 | **Google Chrome** | Primary Chromium browser for development and DevTools |
-| **Firefox** | Privacy-focused browser with a separate engine for cross-browser development |
 | **Chawan** | Terminal web browser and pager with private defaults, CSS, JavaScript, and Kitty images |
 
 ---
@@ -530,7 +512,6 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **delta** | Dracula syntax theme for git diffs |
 | **Kitty** | Full 16-color Dracula-Sakura palette in `kitty.conf` |
 | **Yazi** | Dracula-Sakura manager, status, dialog, mode, and file-type colors in `theme.toml` |
-| **broot** | Full Dracula-Sakura skin in `~/.config/broot/skins/dracula-sakura.hjson` |
 | **Herald** | Full role-based Dracula-Sakura theme in `~/.herald/themes/dracula-sakura.yaml` |
 | **Kiro** | Named interface, syntax, and terminal theme from a local extension under `~/.kiro/extensions/` |
 | **Croft** | Native extension manifest with full interface, syntax, terminal, and tab palettes |
@@ -553,7 +534,6 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **zellij** | Dracula-Sakura theme in the config |
 | **omp** | Full Dracula-Sakura custom theme in `~/.omp/agent/themes/dracula-sakura.json`, selected through `theme.dark` in `config.yml` |
 | **eilmeldung** | Full RGB Dracula-Sakura palette in `~/.config/eilmeldung/config.toml` |
-| **concord** | Dracula-Sakura Highlight Groups and rounded borders in `~/.config/concord/theme.toml` |
 | **spotatui** | Seeded Dracula preset with Sakura rose accents in `~/.config/spotatui/config.yml` |
 | **cfait** | Built-in Dracula theme in its local-first seed configuration |
 | **lnav** | Full Dracula-Sakura `theme-def` (151 values) as a config fragment in `~/.config/lnav/configs/dev-setup/`, selected with lnav's own `:config` |
@@ -561,12 +541,10 @@ Applied consistently across the machine, with built-in Dracula variants kept whe
 | **stu** | 19 `ui.theme.*` keys in `~/.stu/config.toml` (hex, via Ratatouille's colour serde) |
 | **e1s** | 11 hex colour overrides in `~/.config/e1s/config.yml` |
 | **claws** | Dracula preset with Sakura primary, danger, and success overrides |
-| **miniserve** | `--color-scheme-dark dracula` in the `serve` alias |
 | **vivid** | Dracula-themed LS_COLORS for file type coloring |
 | **vim** | Dracula-ish color scheme (no plugin needed) |
 | **macOS** | System highlight color set to Dracula purple |
 
-Watchtower hardcodes its palette and exposes no theme setting. The setup leaves its upstream colors unchanged.
 
 ---
 
@@ -584,7 +562,7 @@ acceptance of a valid one meant anything.
 | `viddy`, `cheznav`, `lazynpm`, `lazyrsync`, `lazyssh` | no theming found in their help or configuration schemas |
 | `mullvad-tui`, Mullvad VPN | Both clients use fixed application colors and expose no theme configuration |
 | `chamber` | Its current configuration schema exposes no theme settings |
-| Firefox, Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
+| Bitwarden, Docker Desktop | Appearance belongs to application or profile state, which the generator does not overwrite |
 
 `stu` and `e1s` are themed but carry **no `--verify` row**. Both are TUIs with no
 validate mode, and without a TTY they panic inside crossterm before config parsing
@@ -684,7 +662,7 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 | `gj timestamp` | Generate an ISO timestamp |
 | `gj weather` | Show weather for a city (via wttr.in) |
 | `gj standup` | Git standup -- what did I do yesterday? |
-| `gj loc` | Count lines of code in current directory (via scc) |
+| `gj loc` | Count lines of code in the current directory |
 
 ### Directory Shortcut Aliases
 
@@ -730,11 +708,7 @@ The script generates config files with sensible defaults:
 | `~/.docker/daemon.json` | Docker | BuildKit enabled, log rotation 10m x 3, DNS, garbage collection |
 | `~/.aria2/aria2.conf` | aria2 | 16 connections, auto-resume, BitTorrent, 64MB cache |
 | `~/.config/atuin/config.toml` | atuin | Fuzzy search, local-only, compact style, enter=paste (not execute), history filter (ls/cd/clear/exit), secrets filter |
-| `~/.config/mprocs/mprocs.yaml` | mprocs | 5k scrollback, wider proc list, per-process logs under the config dir |
-| `~/.config/broot/conf.hjson` | broot | Dracula-Sakura skin import and git-aware defaults |
-| `~/.config/broot/skins/dracula-sakura.hjson` | broot | Full terminal palette for browser, preview, status, git, and diff surfaces |
 | `~/.config/starship.toml` | Starship | Rich two-line prompt with a Dracula-Sakura palette, OS icon, git status with counts, Node/Python/Rust/Go/Docker/AWS/Terraform versions, battery warning, time, Nerd Font icons |
-| `~/.config/yt-dlp/config` | yt-dlp | Best quality mp4, aria2c downloader, metadata, subtitles |
 | `~/.config/gh-dash/config.yml` | gh-dash | PR/issue sections, Dracula-Sakura theme |
 | `~/Library/Application Support/ngrok/ngrok.yml` | ngrok | Base config (add authtoken). ngrok's real macOS path — **not** `~/.config/ngrok`, which it never reads; a stranded copy there is removed on the next run |
 | `~/.config/micro/settings.json` | micro | Dracula (`dracula-tc`), whitespace cleanup, soft wrap, mouse support, and the shared `$EDITOR` role |
@@ -747,8 +721,6 @@ The script generates config files with sensible defaults:
 | `~/.herald/conf.yaml` | Herald | User-owned account config with `theme.name` merged to select Dracula-Sakura |
 | `~/.herald/themes/dracula-sakura.yaml` | Herald | Managed Dracula-Sakura role palette |
 | `~/.config/eilmeldung/config.toml` | eilmeldung | Managed Dracula-Sakura palette, rounded borders, Nerd Font icons, and the macOS URL opener |
-| `~/.config/concord/config.toml` | concord | Keychain token storage, Kitty images, selected-only animation, and opt-in microphone transmission |
-| `~/.config/concord/theme.toml` | concord | Managed Dracula-Sakura Highlight Groups, semantic colors, and rounded borders |
 | `~/.config/spotatui/config.yml` | spotatui | User-owned seed with Dracula-Sakura colors and optional network presence disabled |
 | `~/.config/cfait/config.toml` | cfait | User-owned local-first seed with Dracula, privacy blur, reminders, and the micro editor |
 | `~/Media/photos/dracula-sakura.jpg` | Wallpaper | Bundled Dracula-Sakura wallpaper asset copied onto every provisioned machine |
@@ -836,7 +808,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `lt` | `eza --tree --icons --level=3` | Tree view |
 | `cat` | `bat --paging=never` | Syntax-highlighted file viewer |
 | `top` | `btop` | System monitor |
-| `du` | `dust` | Disk usage |
 | `df` | `duf` | Disk free |
 | `ps` | `procs` | Process list |
 | `ping` | `gping` | Latency graph |
@@ -857,7 +828,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `lg` | `lazygit` | Git UI |
 | `lzd` | `lazydocker` | Docker UI |
 | `md` | `leaf` | Markdown viewer |
-| `serve` | `miniserve ...` | Quick file server |
 | `ghd` | `gh dash` | GitHub dashboard |
 | `gdft` | `git dft` | Syntax-aware git diff |
 | `gha` | `act` | Run GitHub Actions locally |
@@ -865,15 +835,12 @@ All aliases are auto-written to `~/.zshrc`:
 | `claws` | `claws --read-only` | All-AWS TUI with writes disabled by default |
 | `nerdlog` | `nerdlog --set transport=ssh-bin` | Multi-host logs through the generated OpenSSH config |
 | `prog` | `progress -m` | Monitor progress of running coreutils |
-| `ytdl` | `yt-dlp` | Download video |
-| `ytmp3` | `yt-dlp -x --audio-format mp3` | Download audio |
 | `md2pdf` | `pandoc -f markdown -t pdf` | Markdown to PDF |
 | `md2html` | `pandoc -f markdown -t html -s` | Markdown to HTML |
 | `md2docx` | `pandoc -f markdown -t docx` | Markdown to Word |
 | `resize` | `magick mogrify -resize` | Resize images |
 | `lint-sh` | `shellcheck` | Lint shell scripts |
 | `fmt-sh` | `shfmt -w -i 4` | Format shell scripts |
-| `csvp` | `csvlook` | Pretty-print CSV |
 | `watchrun` | `watchexec` | Watch and rerun on changes |
 | `update` | `topgrade` | Update everything |
 | `sysinfo` | `fastfetch` | Quick system info |

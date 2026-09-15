@@ -443,15 +443,15 @@ declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
     [core]="mise (Node, Python), Go, Rust, uv, pnpm, PyYAML helper venv"
     [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework"
-    [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
-    [iac]="terraform-docs, checkov"
+    [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, dynein, iamlive"
+    [iac]="checkov"
     [security]="gitleaks, trivy, semgrep, Objective-See, Bitwarden, chamber"
-    [replacements]="eza, bat, fd, ripgrep, zoxide, btop, sd, dust, just, Yazi, fx, etc."
-    [data-processing]="yq, csvkit, jc, jqp, pandoc, ImageMagick"
+    [replacements]="eza, bat, fd, ripgrep, btop, sd, just, Yazi, fx, etc."
+    [data-processing]="yq, jc, jqp, pandoc, ImageMagick"
     [code-quality]="shellcheck, shfmt, actionlint, act, hadolint, ruff, prettier"
     [perf-testing]="Hurl"
-    [dev-servers]="ngrok, miniserve"
-    [terminal-productivity]="Caligula, Nerdlog, Emeraldian, Watchtower, leaf, topgrade, fastfetch, mprocs, Broot, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, concord, cfait"
+    [dev-servers]="ngrok"
+    [terminal-productivity]="Caligula, Nerdlog, Emeraldian, leaf, topgrade, fastfetch, qalc, lazyssh/rsync/npm, cheznav, eilmeldung, cfait"
     [k8s-github]="gh-dash"
     [database]="duckdb, harlequin, usql, dbmate"
     [containers]="Docker Desktop, lazydocker, dive"
@@ -461,7 +461,7 @@ declare -A CATEGORY_DESC=(
     [docs]="d2"
     [mac-system]="LuLu, Mullvad VPN, mullvad CLI, mullvad-tui"
     [mac-productivity]="Draw.io, Obsidian, Herald, LibreOffice, Vulkan llama.cpp"
-    [mac-browsers]="Firefox, Carbonyl, Chawan, monolith"
+    [mac-browsers]="Google Chrome, Chawan"
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
     [mac-cloud]="rclone, borg, borgmatic"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
@@ -487,9 +487,9 @@ declare -A CONFIG_LIVES_IN_CONFIGS=(
     [aws]="the AWS CLI config (\$HOME/.aws/config), Claws"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
-    [data-processing]="yt-dlp, jqp"
+    [data-processing]="jqp"
     [api]="Posting"
-    [terminal-productivity]="Emeraldian, leaf, topgrade, fastfetch, mprocs, Broot, eilmeldung, concord, cfait"
+    [terminal-productivity]="Emeraldian, leaf, topgrade, fastfetch, eilmeldung, cfait"
     [k8s-github]="gh-dash"
     [database]="harlequin"
     [containers]="Docker daemon, lazydocker"
@@ -2460,6 +2460,26 @@ if [[ "$CLEANUP" == "true" ]]; then
         "formula:sops:sops:removed"
         "formula:hyperfine:hyperfine:removed"
         "formula:oha:oha:removed"
+        # Retired in #638. Configured files are removed separately through
+        # remove_superseded_managed, which preserves unowned user edits.
+        "formula:dust:dust:removed"
+        "formula:zoxide:zoxide:removed"
+        "formula:mprocs:mprocs:removed"
+        "formula:steampipe:steampipe:removed"
+        "formula:miniserve:miniserve:removed"
+        "formula:monolith:monolith:removed"
+        "formula:pv:pv:removed"
+        "formula:csvkit:csvkit (csvstat):removed"
+        "formula:scc:scc:removed"
+        "formula:terraform-docs:terraform-docs:removed"
+        "formula:yt-dlp:yt-dlp:removed"
+        "formula:tlrc:tlrc:removed"
+        "formula:choose-rust:choose:removed"
+        "formula:broot:broot:removed"
+        "formula:lajosdeme/watchtower/watchtower:Watchtower:removed"
+        "formula:concord:concord:removed"
+        "npm:carbonyl:Carbonyl:removed"
+        "cask:firefox:Firefox:removed:Firefox"
         # Retired in #586. The qualified token is required because Homebrew's core
         # cask uses the same basename for the unrelated Nssurge application.
         "cask:surgedm/tap/surge:SurgeDM:removed"
@@ -2632,6 +2652,20 @@ if [[ "$CLEANUP" == "true" ]]; then
         esac
     done
     unset _uv_tools _cargo_tools
+
+    # Watchtower was the sole formula from this tap. `brew untap` refuses to
+    # remove a tap that still owns installed formulae, so a user-added formula
+    # remains safe.
+    if ! brew list --formula lajosdeme/watchtower/watchtower &>/dev/null &&
+       brew tap | grep -qx "lajosdeme/watchtower"; then
+        if [[ "$DRY_RUN" == "true" ]]; then
+            info "[DRY RUN] Would untap lajosdeme/watchtower"
+        elif brew untap lajosdeme/watchtower >> "$LOG_FILE" 2>&1; then
+            success "Watchtower tap removed"
+        else
+            warn "Could not untap lajosdeme/watchtower because it still has installed formulae"
+        fi
+    fi
 
     # -- Orphaned application support trees ----------------------------------
     # Homebrew removes an app bundle but does not remove its per-user data.
@@ -3003,7 +3037,6 @@ if [[ "$VERIFY" == "true" ]]; then
         # `--dry-run` executes nothing; it prints the steps. On a config it cannot accept it
         # prints "Failed to deserialize <path>" and does no work at all. ~3s.
         local out; out="$(topgrade --dry-run 2>&1 || true)"
-        ! grep -q 'Failed to deserialize' <<<"$out"
     }
     _verify_starship() {
         # `print-config` exits 0 even when it could not parse the file; the error only
@@ -3021,8 +3054,6 @@ if [[ "$VERIFY" == "true" ]]; then
 
 
     VERIFY_TARGETS=(
-        # `omp config get` prints the EFFECTIVE value, so a pass proves omp read the file
-        # at this path and resolved our merged key — not merely that the YAML parses.
         # Reading theme.dark rather than a model role keeps it honest when no
         # GEMINI_API_KEY is set: the theme resolves with no provider reachable at all.
         "validate|omp|$HOME/.omp/agent/config.yml|_verify_output_has 'dracula-sakura' omp config get theme.dark"
@@ -3042,7 +3073,6 @@ if [[ "$VERIFY" == "true" ]]; then
         # Both TOML files carry official schema links for editor validation.
         "unchecked|yazi|$HOME/.config/yazi/theme.toml|"
         "unchecked|eilmeldung|$HOME/.config/eilmeldung/config.toml|"
-        "validate|concord|$HOME/.config/concord/config.toml|concord --check-config"
         "unchecked|spotatui|$HOME/.config/spotatui/config.yml|"
         "unchecked|cfait|$HOME/.config/cfait/config.toml|"
         "path|posting|$HOME/.config/posting/config.yaml|posting locate config 2>/dev/null | sed -n '\$p'"
@@ -3060,7 +3090,6 @@ if [[ "$VERIFY" == "true" ]]; then
         "path|harlequin|$HOME/.harlequin.toml|_verify_harlequin_config"
         "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
         "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
-        "unchecked|yt-dlp|$HOME/.config/yt-dlp/config|"
         "unchecked|micro|$HOME/.config/micro/settings.json|"
         "unchecked|croft|$HOME/.config/croft/config.json|"
         # Emeraldian exposes no headless config validator or path command.
@@ -3632,13 +3661,6 @@ brew_cask_install "clawscli/tap/claws" "claws (all-AWS TUI — ~70 services, k9s
 # -- AWS CLIs --
 brew_install "s5cmd" "s5cmd (massively parallel S3 CLI — 10-30x faster than 'aws s3' for bulk)"
 brew_install "dynein" "dynein (ergonomic DynamoDB CLI — awslabs; shorthand ops, import/export)"
-brew_install "steampipe" "steampipe (query live AWS with SQL — inventory & posture)"
-# steampipe AWS plugin (one-time)
-if [[ "$DRY_RUN" != "true" ]] && installed steampipe && ! is_done "config:steampipe-aws"; then
-    steampipe plugin install aws >> "$LOG_FILE" 2>&1 \
-        && success "steampipe AWS plugin installed" || warn "Could not install steampipe aws plugin (run: steampipe plugin install aws)"
-    mark_done "config:steampipe-aws"
-fi
 # iamlive — generate least-privilege IAM policies from observed API calls (tap).
 trust_tap iann0036/iamlive
 brew_install "iann0036/iamlive/iamlive" "iamlive (generate least-privilege IAM policies from observed API calls)"
@@ -3649,7 +3671,6 @@ fi  # aws
 if should_run "iac"; then
 banner "Infrastructure as Code"
 
-brew_install "terraform-docs" "terraform-docs (auto-generate module docs from variables/outputs)"
 brew_install "checkov" "checkov (IaC static analysis — Terraform, CloudFormation, Kubernetes, Dockerfile)"
 # Note: tfsec was folded into trivy (installed under 'security'). Run `trivy config .`
 # instead — same Terraform misconfig coverage, broader scan surface.
@@ -3731,8 +3752,7 @@ brew_install_batch \
     "eza|eza (replaces ls — icons, git status, tree view)" \
     "bat|bat (replaces cat — syntax highlighting, line numbers)" \
     "fd|fd (replaces find — faster, simpler syntax)" \
-    "ripgrep|ripgrep (replaces grep — 10x faster, .gitignore aware)" \
-    "zoxide|zoxide (replaces cd — smart frecency-based jumping)" || true
+    "ripgrep|ripgrep (replaces grep — 10x faster, .gitignore aware)" || true
 brew_install "eza" "eza (replaces ls — icons, git status, tree view)"
 
 # cat -> bat: syntax highlighting, line numbers, git integration, paging
@@ -3744,38 +3764,21 @@ brew_install "fd" "fd (replaces find — faster, simpler syntax)"
 # grep -> ripgrep: massively faster, respects .gitignore, unicode
 brew_install "ripgrep" "ripgrep (replaces grep — 10x faster, .gitignore aware)"
 
-# cd -> zoxide: learns your most-used dirs, fuzzy matching
-brew_install "zoxide" "zoxide (replaces cd — smart frecency-based jumping)"
 
 # diff -> delta: syntax highlighting, side-by-side, git integration
 # (already installed in Git section, just noting the replacement)
 warn "delta (replaces diff — already installed in Git section)"
 
-# man -> tldr: community-driven simplified man pages with examples.
-# The `tldr` FORMULA is deprecated and DISABLED upstream (unmaintained), so a fresh
-# machine cannot install it at all. `tlrc` is the official Rust client and provides
-# the same `tldr` command — but it `conflicts_with` the old formula, so an existing
-# install has to go first or brew refuses. Doing that here rather than leaving it to
-# --cleanup means the swap reaches machines that already have the old one (#299).
-if [[ "$DRY_RUN" != "true" ]] && brew list --formula tldr &>/dev/null; then
-    info "Removing the disabled tldr formula (replaced by tlrc, same command)..."
-    brew uninstall --formula tldr >> "$LOG_FILE" 2>&1 \
-        || warn "Could not uninstall the old tldr formula — tlrc may refuse to install"
-fi
-brew_install "tlrc" "tlrc (official tldr client — replaces man with examples)"
 
 # top/htop -> btop: modern resource monitor with graphs
 brew_install_batch \
     "btop|btop (replaces top/htop — graphs, mouse support)" \
     "sd|sd (replaces sed — intuitive find & replace)" \
-    "choose-rust|choose (replaces cut/awk — simpler syntax)" \
-    "dust|dust (replaces du — visual disk usage tree)" \
     "duf|duf (replaces df — colorful disk usage table)" \
     "procs|procs (replaces ps — sortable, tree view, docker-aware)" \
     "gping|gping (replaces ping — real-time latency graph)" \
     "xh|xh (replaces curl — colorized, JSON-friendly)" \
     "doggo|doggo (replaces dig — colorized DNS, DoH support)" \
-    "scc|scc (replaces wc for code — LOC by language, complexity + COCOMO cost)" \
     "viddy|viddy (replaces watch — diff highlighting, history)" \
     "rsync|rsync (latest — better cp/mv for large transfers)" \
     "hexyl|hexyl (replaces hexdump — colorized hex viewer)" \
@@ -3793,11 +3796,6 @@ brew_install "btop" "btop (replaces top/htop — graphs, mouse support)"
 # sed -> sd: simpler regex syntax, string-literal mode, faster
 brew_install "sd" "sd (replaces sed — intuitive find & replace)"
 
-# cut/awk -> choose: simple column selection, negative indexing
-brew_install "choose-rust" "choose (replaces cut/awk — simpler column selection)"
-
-# du -> dust: visual disk usage with bar charts, sorted
-brew_install "dust" "dust (replaces du — visual disk usage tree)"
 
 # df -> duf: colorful disk free with table layout
 brew_install "duf" "duf (replaces df — colorful disk usage table)"
@@ -3814,8 +3812,6 @@ brew_install "xh" "xh (replaces curl — colorized, JSON-friendly)"
 # dig -> doggo: colorized DNS, supports DoH/DoT (dog is abandoned, doggo is the maintained successor)
 brew_install "doggo" "doggo (replaces dig — colorized DNS, DoH support)"
 
-# wc -> scc: lines of code by language + COCOMO cost/effort + complexity estimates
-brew_install "scc" "scc (replaces wc for code — LOC by language, complexity + COCOMO cost)"
 
 # watch -> viddy: modern watch with diff highlighting, history
 brew_install "viddy" "viddy (replaces watch — diff highlighting, history)"
@@ -3827,9 +3823,8 @@ brew_install "rsync" "rsync (latest — better cp/mv for large transfers)"
 brew_install "hexyl" "hexyl (replaces hexdump — colorized hex viewer)"
 
 # aria2: multi-connection parallel downloads, 3-10x faster than a single stream.
-# The scriptable download backend (yt-dlp and this script use aria2c), reached via
-# its own name or the `dl` shortcut. Deliberately NOT aliased over `wget` — the
-# flags differ, so the alias only turned "command not found" into an exception.
+# The scriptable download backend is reached via its own name or the `dl` shortcut.
+# Deliberately NOT aliased over `wget` because the flags differ.
 brew_install "aria2" "aria2 (replaces curl/wget for downloads — multi-connection, BitTorrent)"
 
 
@@ -3864,17 +3859,13 @@ banner "Data & File Processing"
 # yq: jq for YAML (essential for k8s/CDK)
 brew_install_batch \
     "yq|yq (jq for YAML — essential for k8s/CDK work)" \
-    "csvkit|csvkit (CSV tools — csvcut, csvgrep, csvstat)" \
     "jc|jc (convert command output into JSON for jq/automation)" \
     "jqp|jqp (interactive jq playground / JSON TUI)" \
     "pandoc|pandoc (universal document converter — md, pdf, docx, html)" \
     "tectonic|tectonic (self-contained LaTeX/PDF engine)" \
     "imagemagick|ImageMagick (image resize, convert, composite)" \
-    "poppler|poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)" \
-    "yt-dlp|yt-dlp (video/audio downloader)" || true
+    "poppler|poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)" || true
 brew_install "yq" "yq (jq for YAML — essential for k8s/CDK work)"
-# csvkit: suite of CSV tools
-brew_install "csvkit" "csvkit (CSV tools — csvcut, csvgrep, csvstat)"
 
 # jc: convert classic CLI output into JSON for jq/automation
 brew_install "jc" "jc (convert command output to JSON for jq/automation)"
@@ -3897,8 +3888,6 @@ brew_install "imagemagick" "ImageMagick (image resize, convert, composite)"
 # poppler: PDF utilities — pdftoppm (PDF->PNG), pdftotext, pdfinfo. These tools
 # rasterize the PDFs LibreOffice produces for visual inspection.
 brew_install "poppler" "poppler (PDF tools — pdftoppm, pdftotext, pdfinfo)"
-# yt-dlp: video/audio downloader
-brew_install "yt-dlp" "yt-dlp (video/audio downloader)"
 
 fi  # data-processing
 
@@ -4006,7 +3995,6 @@ if should_run "dev-servers"; then
 banner "Dev Servers & Tunnels"
 
 brew_cask_install "ngrok" "ngrok (expose localhost to the internet)"
-brew_install "miniserve" "miniserve (instant file server from any directory)"
 
 fi  # dev-servers
 
@@ -4042,21 +4030,12 @@ elif command -v leaf &>/dev/null; then
 fi
 unset LEAF_COMPLETION
 brew_install "watchexec" "watchexec (run commands on file changes — better entr)"
-brew_install "pv" "pv (pipe viewer — progress bars for pipes)"
-brew_install "gum" "gum (shell script UI toolkit — prompts, spinners, confirmations)"
-brew_install "topgrade" "topgrade (update everything — brew, npm, pip, macOS, all at once)"
-brew_install "fastfetch" "fastfetch (quick system info display — faster neofetch)"
-brew_install "mprocs" "mprocs (TUI for running multiple dev processes)"
-brew_install "broot" "broot (directory tree and file-navigation TUI)"
 brew_install "lnav" "lnav (advanced log file viewer — auto-format, SQL queries on logs)"
 brew_install "progress" "progress (coreutils progress viewer — cp, mv, dd, tar)"
 # Native release packages avoid duplicate Rust and Go compilation.
 trust_tap iamrohithrnair/tap
 brew_install "iamrohithrnair/tap/emeraldian" \
     "Emeraldian (Obsidian vault TUI with backlinks, graph, and optional assistant)"
-trust_tap lajosdeme/watchtower
-brew_install "lajosdeme/watchtower/watchtower" \
-    "Watchtower (global news, markets, weather, and intelligence dashboard)"
 # Upstream publishes checksum-addressed macOS binaries. Use those instead of its
 # Homebrew formula, whose build-only dependencies install a second Rust toolchain.
 EILMELDUNG_VERSION="1.8.1"
@@ -4173,7 +4152,6 @@ fi
 unset EILMELDUNG_VERSION EILMELDUNG_PREFIX EILMELDUNG_BIN EILMELDUNG_LINK
 unset EILMELDUNG_ASSET EILMELDUNG_SHA256 EILMELDUNG_URL
 unset _eilmeldung_formula _eilmeldung_had_formula _eilmeldung_resolved
-brew_install "concord" "concord (Discord client for the terminal)"
 cargo_install "cfait" cfait \
     "cfait (offline-first task manager TUI with optional CalDAV sync)" --locked
 cargo_install "caligula" caligula \
@@ -4742,15 +4720,8 @@ fi  # mac-productivity
 if should_run "mac-browsers"; then
 banner "Mac Apps — Browsers"
 
-brew_cask_install_batch \
-    "google-chrome|Google Chrome" \
-    "firefox|Firefox" || true
 brew_cask_install "google-chrome" "Google Chrome"
-brew_cask_install "firefox" "Firefox"
-
-npm_global_install "carbonyl" "Carbonyl (Chromium-based browser for the terminal)"
 brew_install "chawan" "Chawan (terminal web browser and pager with CSS, JavaScript, and Kitty images)"
-brew_install "monolith" "monolith (save complete web pages as a single HTML file)"
 
 fi  # mac-browsers
 
@@ -4825,8 +4796,6 @@ fi
 fi  # mac-cloud
 
 
-# mac-disk: Disk analysis handled by dust and duf (installed in "replacements" section)
-# No additional tools needed — section removed to avoid empty banner
 
 # =============================================================================
 if should_run "dracula"; then
@@ -6713,38 +6682,20 @@ rm -f "$_ngrok_seed"
 mark_done "config:ngrok"
 fi
 
-# ---- yt-dlp config ----
-YT_DLP_CONFIG_DIR="$HOME/.config/yt-dlp"
-YT_DLP_CONFIG="$YT_DLP_CONFIG_DIR/config"
-    info "Creating yt-dlp configuration..."
-    write_managed "$YT_DLP_CONFIG" "#" <<'YTDLP_CONF'
-# yt-dlp configuration
-
-# Best quality video + audio, merge to mp4
--f bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best
-
-# Output template: organize by uploader
--o ~/Downloads/%(uploader)s/%(title)s.%(ext)s
-
-# Embed metadata and thumbnail
---embed-metadata
---embed-thumbnail
-
-# Download subtitles if available
---write-auto-subs
---sub-lang en
-
-# Use aria2c for faster downloads
---downloader aria2c
---downloader-args aria2c:"-x 16 -s 16 -k 1M"
-
-# Don't overwrite existing files
---no-overwrites
-
-# Restrict filenames to ASCII
---restrict-filenames
-YTDLP_CONF
-    configured "yt-dlp configured (best quality, aria2c downloader, metadata)"
+# ---- Retired application config cleanup ----
+# Remove only files with the managed markers. User-owned paths and data remain untouched.
+remove_superseded_managed "$HOME/.config/yt-dlp/config" \
+    "yt-dlp was retired from this setup" "(#638)"
+remove_superseded_managed "$HOME/.config/concord/config.toml" \
+    "concord was retired from this setup" "(#638)"
+remove_superseded_managed "$HOME/.config/concord/theme.toml" \
+    "concord was retired from this setup" "(#638)"
+remove_superseded_managed "$HOME/.config/mprocs/mprocs.yaml" \
+    "mprocs was retired from this setup" "(#638)"
+remove_superseded_managed "$HOME/.config/broot/conf.hjson" \
+    "broot was retired from this setup" "(#638)"
+remove_superseded_managed "$HOME/.config/broot/skins/dracula-sakura.hjson" \
+    "broot was retired from this setup" "(#638)"
 
 # difftastic aliases already configured in git global settings above
 
@@ -7852,105 +7803,6 @@ error = "#ff5555"
 EILMELDUNG_CONF
 configured "eilmeldung configured (Dracula-Sakura palette, rounded borders, macOS opener)"
 
-# ---- concord ----
-# Concord validates both files with `concord --check-config`. Force Keychain storage
-# instead of its plaintext fallback and keep microphone transmission opt-in (#557).
-CONCORD_CONFIG_DIR="$HOME/.config/concord"
-CONCORD_CONFIG="$CONCORD_CONFIG_DIR/config.toml"
-CONCORD_THEME="$CONCORD_CONFIG_DIR/theme.toml"
-info "Creating concord config..."
-write_managed "$CONCORD_CONFIG" "#" <<'CONCORD_CONF'
-[display]
-image_protocol = "kitty"
-show_avatars = true
-show_images = true
-media_playback = true
-image_preview_quality = "balanced"
-attachment_viewer_quality = "original"
-animate_previews = "selected"
-show_custom_emoji = true
-hour_format_24 = true
-
-[credentials]
-store = "keychain"
-
-[notifications]
-desktop_notifications = true
-
-[presence]
-share_rich_presence = false
-
-[voice]
-allow_microphone_transmit = false
-push_to_talk = true
-noise_suppression = true
-CONCORD_CONF
-configured "concord configured (Keychain credentials, Kitty images, opt-in microphone)"
-
-info "Creating concord Dracula-Sakura theme..."
-write_managed "$CONCORD_THEME" "#" <<'CONCORD_THEME_CONF'
-[highlight.Normal]
-foreground = "#f8f8f2"
-background = "#282a36"
-
-[highlight.Muted]
-foreground = "#6272a4"
-dim = true
-
-[highlight.Border]
-foreground = "#6272a4"
-
-[highlight.FocusBorder]
-foreground = "#ff79c6"
-
-[highlight.Selection]
-foreground = "#282a36"
-background = "#ffb7c5"
-bold = true
-
-[highlight.SelectionBorder]
-foreground = "#bd93f9"
-bold = true
-
-[highlight.ActiveField]
-foreground = "#8be9fd"
-bold = true
-
-[highlight.MessageLink]
-foreground = "#8be9fd"
-underline = true
-
-[highlight.InlineCode]
-foreground = "#ffb86c"
-
-[highlight.PresenceOnline]
-foreground = "#50fa7b"
-
-[highlight.PresenceIdle]
-foreground = "#f1fa8c"
-
-[highlight.PresenceDnd]
-foreground = "#ff5555"
-
-[highlight.Error]
-foreground = "#ff5555"
-
-[highlight.Warning]
-foreground = "#f1fa8c"
-
-[highlight.Success]
-foreground = "#50fa7b"
-
-[highlight.Info]
-foreground = "#8be9fd"
-
-[ui.border]
-default = "rounded"
-
-[ui.indicator]
-selection = "❯ "
-CONCORD_THEME_CONF
-configured "concord Dracula-Sakura theme configured"
 
 # ---- spotatui ----
 # The Settings screen rewrites behavior and theme data. Seed once so later in-app
@@ -8687,120 +8539,6 @@ FASTFETCH_CONFIG="$HOME/.config/fastfetch/config.jsonc"
 FASTFETCH_CONF
     configured "fastfetch configured (Dracula-Sakura layout, Nerd Font icons, dev tool versions)"
 
-# ---- mprocs config ----
-MPROCS_CONFIG="$HOME/.config/mprocs/mprocs.yaml"
-    info "Creating mprocs configuration..."
-    write_managed "$MPROCS_CONFIG" "#" <<'MPROCS_CONF'
-# mprocs global config — local ./mprocs.yaml overrides these defaults.
-hide_keymap_window: false
-mouse_scroll_speed: 4
-scrollback: 5000
-proc_list_width: 28
-proc_log:
-  enabled: true
-  dir: "<CONFIG_DIR>/logs"
-  mode: append
-MPROCS_CONF
-    configured "mprocs configured (scrollback, pane width, per-proc logs)"
-
-# ---- broot config + Dracula-Sakura skin ----
-BROOT_CONFIG_DIR="$HOME/.config/broot"
-BROOT_CONF="$BROOT_CONFIG_DIR/conf.hjson"
-BROOT_SKIN="$BROOT_CONFIG_DIR/skins/dracula-sakura.hjson"
-    info "Creating broot configuration..."
-    write_managed "$BROOT_CONF" "#" <<'BROOT_CONF_HJSON'
-imports: [
-  "skins/dracula-sakura.hjson"
-]
-
-default_flags: "-g"
-BROOT_CONF_HJSON
-    write_managed "$BROOT_SKIN" "#" <<'BROOT_SKIN_HJSON'
-syntax_theme: MochaDark
-
-skin: {
-    default: rgb(248, 248, 242) none / rgb(221, 210, 247) rgb(40, 42, 54)
-    tree: rgb(138, 136, 199) none / rgb(98, 114, 164) none
-    parent: rgb(155, 231, 255) none bold / rgb(155, 231, 255) rgb(40, 42, 54) italic
-    file: none none / none none
-    directory: rgb(212, 178, 255) none bold / rgb(212, 178, 255) none
-    exe: rgb(138, 247, 207) none
-    link: rgb(255, 207, 147) none
-    pruning: rgb(162, 151, 203) none italic
-    perm__: rgb(162, 151, 203) none
-    perm_r: rgb(255, 207, 147) none
-    perm_w: rgb(255, 122, 168) none
-    perm_x: rgb(138, 247, 207) none
-    owner: rgb(155, 231, 255) none
-    group: rgb(212, 178, 255) none
-    count: rgb(255, 159, 227) rgb(50, 52, 72)
-    dates: rgb(162, 151, 203) none
-    sparse: rgb(255, 122, 168) none italic
-    content_extract: rgb(255, 122, 168) none italic
-    content_match: rgb(255, 240, 168) rgb(75, 73, 99) bold
-    git_branch: rgb(255, 159, 227) none
-    git_insertions: rgb(138, 247, 207) none
-    git_deletions: rgb(255, 122, 168) none
-    git_status_current: rgb(162, 151, 203) none
-    git_status_modified: rgb(255, 207, 147) none
-    git_status_staged: rgb(138, 247, 207) none
-    git_status_new: rgb(155, 231, 255) none bold
-    git_status_ignored: rgb(98, 114, 164) none
-    git_status_conflicted: rgb(255, 122, 168) none
-    git_status_other: rgb(255, 122, 168) none
-    selected_line: none rgb(75, 73, 99) / none rgb(50, 52, 72)
-    char_match: rgb(255, 240, 168) none bold
-    file_error: rgb(255, 122, 168) none
-    flag_label: rgb(162, 151, 203) none
-    flag_value: rgb(255, 159, 227) none bold
-    input: rgb(248, 248, 242) rgb(47, 49, 68) / rgb(221, 210, 247) rgb(47, 49, 68)
-    status_error: rgb(248, 248, 242) rgb(74, 48, 64)
-    status_job: rgb(40, 42, 54) rgb(255, 207, 147)
-    status_normal: rgb(162, 151, 203) rgb(47, 49, 68) / none none
-    status_italic: rgb(212, 178, 255) rgb(47, 49, 68) italic / none none
-    status_bold: rgb(255, 159, 227) rgb(47, 49, 68) bold / none none
-    status_code: rgb(248, 248, 242) rgb(47, 49, 68) / none none
-    status_ellipsis: rgb(248, 248, 242) rgb(47, 49, 68) bold / none none
-    purpose_normal: none none
-    purpose_italic: rgb(155, 231, 255) none italic
-    purpose_bold: rgb(155, 231, 255) none bold
-    purpose_ellipsis: none none
-    scrollbar_track: rgb(50, 52, 72) none / rgb(50, 52, 72) none
-    scrollbar_thumb: rgb(106, 93, 134) none / rgb(106, 93, 134) none
-    help_paragraph: none none
-    help_bold: rgb(255, 207, 147) none bold
-    help_italic: rgb(212, 178, 255) none italic
-    help_code: rgb(138, 247, 207) rgb(50, 52, 72)
-    help_headers: rgb(255, 194, 236) none bold
-    help_table_border: rgb(98, 114, 164) none
-    preview_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
-    preview: rgb(248, 248, 242) none / rgb(221, 210, 247) none
-    preview_line_number: rgb(138, 136, 199) rgb(40, 42, 54) / rgb(138, 136, 199) none
-    preview_separator: rgb(98, 114, 164) none / rgb(98, 114, 164) none
-    preview_match: none rgb(255, 240, 168) bold
-    diff_line_number: rgb(138, 136, 199) rgb(50, 52, 72)
-    diff_added: rgb(248, 248, 242) rgb(35, 59, 54)
-    diff_removed: rgb(248, 248, 242) rgb(74, 48, 64)
-    hex_null: rgb(138, 136, 199) none
-    hex_ascii_graphic: rgb(255, 207, 147) none
-    hex_ascii_whitespace: rgb(138, 247, 207) none
-    hex_ascii_other: rgb(155, 231, 255) none
-    hex_non_ascii: rgb(255, 122, 168) none
-    staging_area_title: rgb(248, 248, 242) rgb(40, 42, 54) / rgb(221, 210, 247) rgb(40, 42, 54)
-    mode_command_mark: rgb(40, 42, 54) rgb(255, 159, 227) bold
-    good_to_bad_0: rgb(138, 247, 207)
-    good_to_bad_1: rgb(138, 247, 207)
-    good_to_bad_2: rgb(155, 231, 255)
-    good_to_bad_3: rgb(212, 178, 255)
-    good_to_bad_4: rgb(255, 207, 147)
-    good_to_bad_5: rgb(255, 207, 147)
-    good_to_bad_6: rgb(255, 159, 227)
-    good_to_bad_7: rgb(255, 159, 227)
-    good_to_bad_8: rgb(255, 122, 168)
-    good_to_bad_9: rgb(255, 122, 168)
-}
-BROOT_SKIN_HJSON
-    configured "broot configured (Dracula-Sakura skin, git-aware defaults)"
 
 # ---- jqp config ----
 JQP_CONFIG="$HOME/.jqp.yaml"
@@ -9098,7 +8836,6 @@ prompt: enabled
 pager: delta
 
 aliases:
-    co: pr checkout
     pv: pr view --web
     pc: pr create --web
     pl: pr list
@@ -9246,8 +8983,6 @@ docker-usage:
 # ── Dev ──────────────────────────────────────────────────────────────────────
 
 # Serve current directory on port 8080
-serve port="8080":
-    miniserve --color-scheme-dark dracula -qr . -p {{port}}
 
 # Generate a UUID
 uuid:
@@ -9317,7 +9052,7 @@ standup:
 
 # Count lines of code in current directory
 loc:
-    @scc . 2>/dev/null || find . -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' | xargs wc -l | tail -1
+    @find . -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.py' -o -name '*.go' -o -name '*.rs' \) -print0 | xargs -0 wc -l | tail -1
 JUSTFILE_CONF
     configured "Global justfile created (~/.justfile — system, git, docker, network, cleanup, info recipes)"
 
@@ -12475,8 +12210,6 @@ fi
 [[ -r "$_cachedir/ls_colors" ]] && export LS_COLORS="$(< "$_cachedir/ls_colors")"
 
 # -- Tool Initialization ------------------------------------------------------
-
-# GNU coreutils on PATH — deterministic prefix, no per-pkg `brew --prefix` fork
 : "${HOMEBREW_PREFIX:=/opt/homebrew}"
 for _pkg in coreutils gnu-sed gnu-tar gawk findutils; do
     _gnubin="$HOMEBREW_PREFIX/opt/$_pkg/libexec/gnubin"
@@ -12490,8 +12223,6 @@ unset _pkg _gnubin
 # direnv
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 
-# zoxide
-command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 
 # starship prompt
 command -v starship &>/dev/null && eval "$(starship init zsh)"
@@ -12570,8 +12301,6 @@ unset _cachedir
 # System section, covering EVERY alias and the fzf launcher functions, not just the
 # replacements immediately below.
 #
-# That same reasoning applies throughout: none of the replacements accept the flags
-# the original takes. `du -sh` prints dust's help text, `top -l1` is an unknown
 # argument, and `pip install X` becomes `uv pip install X` and dies with "No virtual environment found".
 # `ps aux` and `dig +short` silently ignore the argument and return
 # differently-shaped output that looks correct. A human notices; a script or an AI
@@ -12579,7 +12308,6 @@ unset _cachedir
 # claws) and the fzf-backed a/ff/rgf simply block when no terminal is attached.
 #
 # Coding agents run commands through a non-interactive shell that still sources
-# this file, so they inherit these aliases without a guard. Gate on interactivity,
 # plus the agent variable as a backstop for an agent that invokes `zsh -i`.
 # Gating the section also covers aliases added later.
 # Remove the legacy managed alias on reload. Do not change a user-defined alias.
@@ -12592,7 +12320,6 @@ if [[ -o interactive && -z "$AI_AGENT" ]]; then
     alias lt="eza --tree --icons --level=3"
     alias cat="bat --paging=never"
     alias top="btop"
-    alias du="dust"
     alias df="duf"
     alias ps="procs"
     alias ping="gping"
@@ -12601,34 +12328,6 @@ if [[ -o interactive && -z "$AI_AGENT" ]]; then
     alias hexdump="hexyl"
 
 # Short aliases for modern tools (don't override builtins)
-alias f="fd"           # fd (fast find)
-alias dft="difft"      # difftastic
-# Yazi's recommended wrapper changes the parent shell directory after exit.
-# Press `Q` instead of `q` in Yazi to leave the shell directory unchanged.
-y() {
-  local tmp cwd
-  tmp="$(mktemp -t 'yazi-cwd.XXXXXX')"
-  command yazi "$@" --cwd-file="$tmp"
-  IFS= read -r -d '' cwd < "$tmp" || true
-  [[ "$cwd" != "$PWD" && -d "$cwd" ]] && builtin cd -- "$cwd"
-  /bin/rm -f -- "$tmp"
-}
-# Broot's generated launcher applies `cd` and other shell commands in this shell.
-function br {
-    local cmd cmd_file code
-    cmd_file=$(mktemp)
-    if broot --outcmd "$cmd_file" "$@"; then
-        cmd=$(<"$cmd_file")
-        command rm -f "$cmd_file"
-        eval "$cmd"
-    else
-        code=$?
-        command rm -f "$cmd_file"
-        return "$code"
-    fi
-}
-alias jx="fx"          # fx interactive JSON viewer
-
 # -- Download & Transfer ------------------------------------------------------
 # `dl` is a shortcut for a tool that IS installed. There is deliberately no
 # `wget` alias: wget is not installed, aria2c takes different flags, and aliasing
@@ -12647,18 +12346,7 @@ alias lzd="lazydocker"
 
 # -- File Tools ---------------------------------------------------------------
 alias md="leaf"
-alias serve="miniserve --color-scheme-dark dracula -qr ."
-alias csvp="csvlook"
-
-# -- Media & Conversion -------------------------------------------------------
-alias ytdl="yt-dlp"
-alias ytmp3="yt-dlp -x --audio-format mp3"
 alias resize="magick mogrify -resize"
-alias md2pdf="pandoc -f markdown -t pdf"
-alias md2html="pandoc -f markdown -t html -s"
-alias md2docx="pandoc -f markdown -t docx"
-
-# -- Python (uv) -------------------------------------------------------------
 # No `pip` alias. Bare `pip` is not installed, so the alias only redirected muscle
 # memory — and it redirected badly: `pip install X` became `uv pip install X`,
 # which fails with "No virtual environment found" and reads like a broken Python
@@ -12671,20 +12359,6 @@ alias pyrun="uv run"
 # -- Global Justfile ----------------------------------------------------------
 alias gj="just --justfile ~/.justfile --working-directory ."
 
-# -- Dev & Testing ------------------------------------------------------------
-alias watchrun="watchexec --exts ts,tsx --restart"
-alias lint-sh="shellcheck"
-alias fmt-sh="shfmt -w -i 4"
-
-# -- Terminal Apps ------------------------------------------------------------
-alias prog="progress -m"
-alias clip="clipse"    # clipboard-history TUI (replaces Raycast clipboard)
-alias nerdlog="nerdlog --set transport=ssh-bin"  # honor the generated OpenSSH config
-
-# -- Dracula theming for tools that theme via env/flags (config-file tools themed elsewhere) --
-alias claws="claws --read-only"         # safe default; use `command claws` for writes
-export D2_THEME=200                     # d2 diagrams — dark theme (d2 has no exact Dracula; 200 = Dark Mauve)
-export D2_DARK_THEME=200
 
 # -- Terminal search helpers --------------------------------------------------
 # ff: find a file by name and open it
@@ -12703,24 +12377,12 @@ rgf() {
 # s: Spotlight-index search from the terminal
 s() { mdfind "$@"; }
 
-# -- Database -----------------------------------------------------------------
-alias hq="harlequin"
-
-# -- Directory Shortcuts (using zoxide for smart jumping) --------------------
-alias cw="z ~/Code/work"
-alias cper="z ~/Code/personal"
-alias coss="z ~/Code/oss"
-alias clearn="z ~/Code/learning"
-alias cscratch="z ~/Code/work/scratch"
-alias cscripts="z ~/Scripts"
 
 # -- Helper Script Shortcuts --------------------------------------------------
 alias nproj="new-project"
 alias cwork="clone-work"
 alias cpers="clone-personal"
 alias dotback="backup-dotfiles"
-alias pstats="project-stats"
-alias cleandl="clean-downloads"
 alias hc="health-check"
 alias sshsetup="setup-ssh"
 alias brewsnap="export-brewfile"
@@ -12767,8 +12429,7 @@ if [[ -o interactive ]] && [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_E
 fi
 
 MANAGED_ZSHRC
-[[ "$DRY_RUN" == "true" ]] || success "$HOME/.zshrc managed block written (edits outside the markers are kept)"
-
+configured "$HOME/.zshrc created (PATH, aliases, tool initialization, Dracula-Sakura welcome screen)"
 fi  # shell
 
 # =============================================================================
@@ -12809,8 +12470,6 @@ echo "  [~/.docker/daemon.json] BuildKit, log rotation"
 echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
 echo "  [~/.config/starship]    Dracula-Sakura prompt"
 echo "  [~/.config/atuin]       Fuzzy search, local-only"
-echo "  [~/.config/mprocs]      Multi-process TUI defaults + per-proc logs"
-echo "  [~/.config/broot]       Broot git-aware defaults and Dracula-Sakura skin"
 echo "  [~/.jqp.yaml]           jq playground theme overrides"
 echo "  [~/.omp/agent]          OMP settings, LSP policy, model routing, theme, and path guard"
 echo "  [~/.agents/skills]      Curated skills Oh My Pi reads natively"
@@ -12820,13 +12479,11 @@ echo "  [Application Support/emeraldian]  User-owned defaults and native Dracula
 echo "  [Obsidian vaults]       Per-vault Dracula-Sakura theme and appearance defaults"
 echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura theme"
 echo "  [~/.config/eilmeldung] Dracula-Sakura RSS reader theme"
-echo "  [~/.config/concord]    Keychain credentials and Dracula-Sakura theme"
 echo "  [~/.config/spotatui]   User-owned Dracula-Sakura music player seed"
 echo "  [~/.config/cfait]      User-owned local-first task manager seed"
 echo "  [llama.cpp]             Vulkan local model server on 127.0.0.1:8081"
 echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
-echo "  [~/.config/yt-dlp]      Best quality, aria2c downloader"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
 echo "  [~/.config/mpv]         Video player (hardware accel, save position)"
@@ -12861,7 +12518,6 @@ info "A few useful next moves:"
 echo "  - Keep ~/Desktop empty — use 'ff' / 's' (mdfind) to find files from the terminal"
 echo "  - Disable iCloud Desktop & Documents: System Settings > Apple ID > iCloud > iCloud Drive > Options"
 echo "  - watchexec: watch files with 'watchexec --exts ts,tsx -- npm test'"
-echo "  - pv: add progress bars with 'pv largefile.tar.gz | tar xz'"
 echo ""
 # =============================================================================
 # GENERATE DESKTOP DOCS (checklist, shortcuts, toolkit summary)
@@ -12900,14 +12556,8 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Open Kiro and confirm that **Dracula-Sakura** is the selected color theme.
 - [ ] Sign in to Bitwarden.
 - [ ] Select the dark Bitwarden appearance.
-- [ ] Run `concord`.
-- [ ] Complete the Discord login.
 - [ ] Run `eilmeldung`.
 - [ ] Run `emeraldian` to open the most recent Obsidian vault.
-- [ ] Run `watchtower` to choose a location and optional model provider.
-- [ ] Select an RSS provider.
-- [ ] Open the Firefox theme page at `https://draculatheme.com/firefox`.
-- [ ] Install the theme in the Firefox profile.
 - [ ] Open each registered Obsidian vault and confirm Dracula-Sakura under Settings > Appearance > Themes.
 
 ## Services and storage
@@ -12974,7 +12624,6 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | zellij mode keys | `Ctrl + p` pane · `Ctrl + t` tab · `Ctrl + n` resize · `Ctrl + s` scroll · `Ctrl + o` session · `Ctrl + g` lock (toggles) |
 | lazygit / lazydocker / lazynpm / lazyssh / lazyrsync | Full-screen TUIs (arrows + on-screen keys) |
 | `y` Yazi | File manager |
-| `br` Broot | Directory browser that keeps shell directory changes |
 | `mullvad-tui` | Terminal controller for the Mullvad VPN app and daemon |
 | `cliamp` | Terminal music player (Winamp-style) — playback, EQ, cycle visualizers |
 | `posting` | HTTP client TUI with git-friendly YAML collections |
@@ -12983,10 +12632,8 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 | `cha` | Terminal web browser and pager |
 | `claws` | Broad AWS TUI with a read-only shell default |
 | `eilmeldung` | RSS reader with vim-style navigation |
-| `concord` | Discord client with Keychain token storage |
 | `cfait` | Local-first task manager |
 | `emeraldian` | Obsidian vault TUI with backlinks, graph, and an optional assistant |
-| `watchtower` | Global news, markets, weather, and intelligence dashboard |
 | `chamber` | Local encrypted secrets vault and terminal interface |
 | `spotatui` | Multi-source terminal music player |
 
@@ -13011,11 +12658,8 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **Spotlight** provides global application, file, and web search.
 - **zellij** provides panes, tabs, and persistent terminal sessions.
 - `ff`, `rgf`, `s`, and `clip` provide file, search, and clipboard access.
-- **Broot** provides tree navigation through the directory-changing `br` launcher.
-- **atuin**, **starship**, **fzf**, and **zoxide** improve shell history, prompts, search, and navigation.
 
 ## Development workflow
-- **lazygit**, **gh**, and **scc** support GitHub workflows and repository maintenance.
 - **Posting**, **xh**, and **Hurl** support API development.
 - **harlequin** and **usql** provide database clients.
 - **Prettier** formats JavaScript, TypeScript, CSS, Markdown, and YAML.
@@ -13027,10 +12671,8 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **Croft** provides a terminal IDE with LSP, debugging, source control, and PDF previews.
 - **Herald** provides terminal email and calendar access.
 - **eilmeldung** provides RSS reading with a managed Dracula-Sakura palette.
-- **concord** provides Discord access with Keychain token storage.
 - **cfait** provides local-first tasks with optional CalDAV synchronization.
 - **Emeraldian** provides a themed Obsidian vault TUI with graph and backlink views.
-- **Watchtower** provides a global news, markets, and weather dashboard.
 - **Caligula** provides verified disk imaging with compressed-image support.
 - **Nerdlog** provides multi-host log viewing through OpenSSH.
 - **Chawan** provides terminal web browsing and paging with private defaults.
@@ -13038,7 +12680,6 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 
 ## Data, media, and storage
 - **Yazi** provides file management, previews, and bulk tasks.
-- **eza**, **bat**, **fd**, **ripgrep**, **dust**, **duf**, and **sd** replace common file utilities.
 - **cliamp** and **spotatui** provide music playback.
 - **aria2** manages downloads.
 - **rclone**, **borg**, and **borgmatic** provide synchronization and backups.
@@ -13088,7 +12729,6 @@ section below.
 | `cat` | **bat** | syntax-highlighted file printing (use `/bin/cat` in heredocs) |
 | `ls` | **eza** | icons, git status, tree view |
 | `ps` | **procs** | sortable, tree, docker-aware process list |
-| `du` | **dust** | visual disk-usage tree |
 | `df` | **duf** | colorful disk-free table |
 | `top` | **btop** | graphed system monitor |
 | `ping` | **gping** | live latency graph |
@@ -13096,14 +12736,12 @@ section below.
 | `watch` | **viddy** | diff-highlighted repeated runs |
 
 > These aliases are **interactive only**. Scripts and AI agents get the real
-> POSIX commands, because none of the replacements accept the original's flags
-> (`du -sh` prints dust's help, `ps aux` silently ignores `aux`). The setup does
-> not replace `rm`; use `trash` when you need recoverable deletion.
+> POSIX commands, because replacement tools can reject classic flags. The setup
+> does not replace `rm`; use `trash` when you need recoverable deletion.
 >
 > Tools without a classic-name alias, reached by their own names: **sd**
-> (find & replace — its own syntax, *not* a sed drop-in), **zoxide** (`z`/`zi`
-> for frecency jumping; plain `cd` is untouched), **aria2c** (`dl`),
-> **rg**, **fd**. `bat`, `eza`, `dust`, `duf`, `btop` and `procs` are covered in
+> (find & replace — its own syntax, *not* a sed drop-in), **aria2c** (`dl`),
+> **rg**, **fd**. `bat`, `eza`, `duf`, `btop` and `procs` are covered in
 > their categories below.
 
 
@@ -13201,19 +12839,6 @@ atuin import auto
 
 > Tip: `atuin search --exit 0` filters to only commands that succeeded — handy when hunting for "that command that actually worked."
 
-### `z` — Zoxide
-A smarter `cd` that learns which directories you visit most often and how recently (a "frecency" score), so you can jump to them with a short fuzzy fragment instead of a full path. It replaces plain `cd` for anywhere you go regularly, cutting deep `cd ~/Code/personal/some-project` typing down to a couple of letters. It builds its database automatically just by you `cd`-ing around normally.
-
-```bash
-# jump to the best match for "dev-setup"
-z dev-setup
-# jump to a directory matching two fragments
-z code personal
-# list tracked directories with their scores
-zoxide query -l
-```
-
-> Tip: Use plain `cd` for a path you'll only visit once — `z` learns from every jump, so one-off detours pollute its rankings.
 
 ### `zellij` — Zellij
 A terminal multiplexer that provides panes, tabs, and persistent sessions. It shows key bindings and supports project-specific layouts.
@@ -13229,19 +12854,6 @@ zellij attach <session-name>
 
 > Tip: `Ctrl+g` locks/unlocks keybinding mode — if keys stop doing anything inside a pane, you've probably entered a plugin's own input mode.
 
-### `mprocs` — Multi-Process TUI
-A terminal UI for running several long-lived development processes at once — app server, frontend watcher, tests, worker — with each command's output in its own pane instead of interleaved in one scrollback. Use it when a project normally costs you three terminal tabs just to boot the stack.
-
-```bash
-# run a few commands directly
-mprocs "npm run dev" "npm test -- --watch"
-# run the processes declared in ./mprocs.yaml
-mprocs
-# load scripts from package.json without starting them automatically
-mprocs --npm
-```
-
-> Tip: this setup writes a global `~/.config/mprocs/mprocs.yaml` with sane scrollback and per-process logging, while a project-local `mprocs.yaml` overrides it whenever you need a real stack definition.
 
 ### `direnv` — direnv
 Automatically loads and unloads environment variables per-directory based on an `.envrc` file, so project-specific secrets, API keys, or `PATH` additions apply only while you're inside that directory and vanish when you leave. It replaces manually sourcing `.env` files or juggling global exports for project-specific config. Use it for anything that needs local env vars — database URLs, per-project tool versions, feature flags — without leaking them into your global shell.
@@ -13378,21 +12990,6 @@ eza --tree --level=3
 eza -l --icons --group-directories-first
 ```
 
-### `dust` — Visual Disk Usage
-A `du` replacement that prints a sorted, bar-charted tree of what is actually consuming space, biggest first, with no flag archaeology.
-
-```bash
-# what is using space here
-dust
-# limit how deep the tree goes
-dust -d 2
-# a specific directory
-dust ~/Code
-# smallest first
-dust -r
-```
-
-> `du -sh` in an interactive shell prints **dust's help**, not a size, because the alias does not accept `du`'s flags. Use `/usr/bin/du -sh` when you want the classic behaviour.
 
 ### `duf` — Disk Free, Readable
 A `df` replacement that groups devices sensibly and renders usage bars instead of a wall of blocks. Note its flags are **single-dash**, Go style, not GNU style.
@@ -13408,19 +13005,6 @@ duf -hide special
 duf -json
 ```
 
-### `zoxide` — Frecency Directory Jumping
-Learns the directories you visit and lets you jump by fragment. It **adds** `z` and `zi`; plain `cd` is left completely untouched, so nothing you already do changes.
-
-```bash
-# jump to the best match for "proj"
-z proj
-# match on two fragments
-z code work
-# interactive picker over the database
-zi
-# inspect what it has learned
-zoxide query -l
-```
 
 ### `sd` — Find and Replace
 A find-and-replace tool with sane syntax: no escaping a regex twice, no `-i ''` portability trap. It is **not** a `sed` drop-in — the syntax is its own, and it does not do `sed`'s stream-editing commands.
@@ -13545,42 +13129,10 @@ rclone sync ~/Documents remote:Documents
 rclone ls remote:Documents
 ```
 
-### `miniserve` — miniserve
-Spins up an instant HTTP file server for the current (or a given) directory — no config, no setup — so you can quickly share files with another device on the network or test static content. Reach for it when you need to grab a file from your phone, hand a teammate a quick download link, or sanity-check a static site build.
 
-```bash
-# serve the current directory over HTTP
-miniserve .
-# serve on a specific port
-miniserve . -p 8080
-# allow browser-based file uploads into the served directory
-miniserve . --upload-files
-```
-
-### `monolith` — monolith
-Saves a complete web page — HTML, CSS, JavaScript, and images — as a single self-contained `.html` file with everything inlined, so the page still renders correctly when opened offline with no external requests. Use it to archive a web page or documentation article exactly as it appeared, for offline reading or long-term reference.
-
-```bash
-# save a page as a single self-contained HTML file
-monolith https://example.com -o page.html
-# save without executing embedded JavaScript
-monolith -j https://example.com -o page.html
-```
-
-### `pv` — pipe viewer
-Inserted into a shell pipeline, `pv` shows a live progress bar, throughput, and ETA for the data flowing through it — something a plain pipe gives you zero visibility into. Use it when copying, compressing, or transferring large amounts of data through pipes and you want to know it's actually moving (and how much longer it'll take).
-
-```bash
-# show progress while copying a large file
-pv bigfile.iso > /dev/null
-# monitor throughput while piping into gzip
-tar cf - mydir | pv | gzip > archive.tar.gz
-# specify a known total size for an accurate ETA
-pv -s 4G bigfile.iso | ssh host 'cat > bigfile.iso'
-```
 
 ### `progress` — progress
-Unlike `pv`, which you insert into a pipeline in advance, `progress` inspects an *already-running* coreutils command (`cp`, `mv`, `dd`, `tar`, etc.) and reports its progress and ETA after the fact. Use it when you forgot to wrap a long-running copy in `pv` and just want to know how far along it is.
+`progress` inspects an already-running coreutils command (`cp`, `mv`, `dd`, `tar`, etc.) and reports its progress and ETA.
 
 ```bash
 # show progress of currently running cp/mv/dd/tar commands
@@ -13697,19 +13249,6 @@ jqp '.items[] | {name, id}' -f data.json
 
 > Tip: this setup writes `~/.jqp.yaml` with a Dracula-Sakura-flavored override layer on top of jqp's built-in Dracula theme, so it matches the rest of the terminal palette.
 
-### `csvstat` [csvkit: csvcut/csvgrep/csvjson] — CSV Utility Suite
-A suite of small Unix-style utilities for working with CSV files: cutting columns, grepping rows, computing summary stats, and converting to JSON or SQL. It brings classic Unix text-tool ergonomics to tabular data that plain grep/cut mangle because of quoting and commas. Reach for it for quick, composable CSV inspection without opening a spreadsheet.
-
-```bash
-# summary stats for every column
-csvstat data.csv
-# select specific columns by name
-csvcut -c name,email data.csv
-# filter rows matching a pattern in a column
-csvgrep -c status -m active data.csv
-# convert CSV to JSON
-csvjson data.csv > data.json
-```
 
 ### `git` — Version Control System
 The distributed version control system underlying the whole trunk-based workflow — branches, commits, merges, and history. In this setup it's configured with delta as the diff pager, difftastic available for structural diffs, and commit signing enabled. Every change here starts with a feature branch and ends in a squash-merged PR.
@@ -13800,17 +13339,6 @@ pre-commit autoupdate
 directory. The setup does not set a global `core.hooksPath`, so Git uses the
 repository hook normally.
 
-### `scc` — Source Code Counter
-Counts lines of code by language across a codebase, along with cyclomatic complexity and COCOMO cost/effort estimates — a much faster, more informative replacement for `cloc` or `wc -l`. Use it to get a quick sense of a new codebase's size and language mix, or to track complexity trends over time. It's fast enough to run on large monorepos without waiting.
-
-```bash
-# get a full breakdown of the current project
-scc .
-# sort output by complexity instead of line count
-scc --sort complexity .
-# output machine-readable JSON for other tooling
-scc --format json .
-```
 
 
 ## HTTP, APIs & networking
@@ -13887,13 +13415,6 @@ mkcert localhost
 mkcert localhost 127.0.0.1 myapp.local
 ```
 
-### `carbonyl` — Chromium in the Terminal
-A real Chromium browser rendered entirely inside the terminal, including images, CSS, JavaScript, and video. It supports full pages over SSH or in headless environments.
-
-```bash
-# open a URL in the terminal browser
-carbonyl https://example.com
-```
 
 ### `cha` [Chawan] — Terminal Web Browser
 Chawan is a terminal browser and pager with CSS, JavaScript, and Kitty image support.
@@ -14173,19 +13694,6 @@ cfn-lint templates/*.yaml
 cfn-lint --ignore-checks W3011 template.yaml
 ```
 
-### `steampipe` — Cloud Infrastructure via SQL
-Lets you query live cloud infrastructure — AWS resources, and many other sources — using plain SQL, powered by a Postgres foreign-data-wrapper engine under the hood. It's excellent for inventory audits, posture checks, and ad hoc "which resources have X" questions that would otherwise mean scripting the AWS CLI plus `jq`. Requires installing a plugin for whichever provider you're querying.
-
-```bash
-# install the AWS plugin (one-time setup)
-steampipe plugin install aws
-# open the interactive SQL query shell
-steampipe query
-# run a single query directly
-steampipe query "select instance_id, instance_type from aws_ec2_instance"
-```
-
-> Tip: `steampipe query` results are just SQL, so you can join across services — e.g. correlate IAM roles with the EC2 instances that use them.
 
 ### `s5cmd` — Fast S3 Client
 A massively parallel S3 client that's 10–30x faster than `aws s3` for bulk copy and sync operations, because it parallelizes transfers far more aggressively. Reach for it whenever you're moving large numbers of objects or large volumes of data in or out of S3 and `aws s3 sync` feels too slow.
@@ -14285,17 +13793,6 @@ aws ssm start-session --target i-0123456789abcdef0 \
 ```
 
 
-### `terraform-docs` — Module Documentation Generator
-Auto-generates Markdown documentation of a Terraform module's inputs, outputs, providers, and resources directly from the code, so module docs do not drift. Use it to keep each module README accurate.
-
-```bash
-# generate a markdown table and write it to a new file
-terraform-docs markdown table --output-file README.md .
-# inject/update generated docs between markers in an existing README
-terraform-docs markdown table --output-file README.md --output-mode inject .
-```
-
-> Tip: add `<!-- BEGIN_TF_DOCS -->` / `<!-- END_TF_DOCS -->` markers to a README so `--output-mode inject` knows where to update.
 
 ### `checkov` — IaC Static Analysis
 Runs static analysis over infrastructure-as-code — Terraform, CloudFormation, Kubernetes manifests, Dockerfiles — against hundreds of built-in security and compliance policies. It catches misconfigurations like overly permissive IAM policies or unencrypted storage before they're ever applied. Run it as a pre-deploy gate alongside `trivy config`.
@@ -14770,17 +14267,6 @@ jpegoptim --max=85 photo.jpg
 jpegoptim --noaction photo.jpg
 ```
 
-### `yt-dlp` — Video/Audio Downloader
-Downloads video and audio from YouTube and thousands of other sites, picking up where the now-dormant `youtube-dl` left off with far more active maintenance. Use it to grab a video for offline viewing or pull just the audio track from a talk or podcast episode.
-
-```bash
-# download a video at best quality
-yt-dlp "https://youtube.com/watch?v=..."
-# extract audio only, saved as mp3
-yt-dlp -x --audio-format mp3 "https://youtube.com/watch?v=..."
-# download an entire playlist
-yt-dlp --yes-playlist "https://youtube.com/playlist?list=..."
-```
 
 ### `mpv` — Media Player
 A minimal, keyboard-driven media player that runs from the terminal, handling essentially any video or audio format with hardware-accelerated playback. It replaces reaching for QuickTime/VLC for a quick local playback check.
@@ -14808,17 +14294,6 @@ qalc -interactive
 
 > Tip: `qalc -exrates` refreshes currency exchange rates before a conversion.
 
-### `tldr` — Community Cheat Sheets
-Installed as **tlrc**, the official Rust client; the command is still `tldr`. Pulls up short, example-first cheat sheets for a command instead of a full man page — a handful of the most common real-world invocations rather than an exhaustive flag reference. Use it when you just want to remember "how do I usually run this thing."
-
-```bash
-# show simplified examples for a command
-tldr tar
-# refresh the local cheat-sheet database
-tldr --update
-# list every page available locally
-tldr --list
-```
 
 ### `lnav` — Log File Navigator
 An advanced log viewer that auto-detects log formats, merges multiple files into one time-ordered view, and lets you run SQL queries over the parsed log data. It replaces `less`/`tail -f` plus manual `grep` gymnastics when you're trying to make sense of real log files.
@@ -14892,31 +14367,10 @@ lazyrsync run myprofile
 lazyrsync
 ```
 
-### `choose` — Simple Field Selector
-A simpler alternative to `cut`/`awk` for pulling specific fields or columns out of lines of text, using intuitive index and range syntax instead of `awk`'s programming-language overhead. It supports negative indices to count from the end of a line, something `cut` can't do at all. Reach for it any time you're piping command output and just need "give me column 3."
-
-```bash
-# select the second field (0-indexed) on each line
-echo "a b c" | choose 1
-# select a range of fields
-echo "a b c d e" | choose 1:3
-# use a custom field separator
-echo "a,b,c" | choose -f ',' 0
-```
-
-> Tip: `choose -1` (a negative index) grabs the last field on each line.
 
 
 ## Restored Workstation Tools
 
-### `br` (Broot)
-Broot displays a searchable directory tree with previews and Git state.
-The `br` wrapper applies directory changes to the parent shell.
-
-```bash
-br
-br ~/Code
-```
 
 ### `caligula`
 Caligula writes and verifies compressed or uncompressed disk images.
@@ -14953,14 +14407,6 @@ emeraldian
 emeraldian ~/Notes
 ```
 
-### `watchtower`
-Watchtower provides global news, markets, local weather, and optional model-generated briefs.
-Run the setup wizard to choose the required location and any model provider.
-Watchtower hardcodes its colors, so this release cannot apply the house theme through configuration.
-
-```bash
-watchtower
-```
 
 
 ### `eilmeldung`
@@ -14971,14 +14417,6 @@ The managed config uses Dracula-Sakura colors and the macOS URL opener.
 eilmeldung
 ```
 
-### `concord`
-Concord provides Discord access in the terminal.
-It stores the token in Keychain and keeps microphone transmission disabled until enabled.
-
-```bash
-concord
-concord --check-config
-```
 
 ### `cfait`
 Cfait provides offline-first tasks with optional CalDAV synchronization.
@@ -15060,11 +14498,6 @@ lives at `~/.config/kitty/kitty.conf`.
 
 ### Google Chrome — Primary Browser
 The primary GUI browser handles sites that need extensions and DevTools.
-Carbonyl and Chawan cover terminal browsing.
-
-### Firefox
-Firefox provides an independent browser engine for privacy and compatibility work.
-Theme installation stays profile-owned.
 
 ### Obsidian
 Obsidian provides a local Markdown knowledge base.
@@ -15331,7 +14764,6 @@ if [[ "$DRY_RUN" == "false" ]]; then
         "bat:bat --version"
         "rg:rg --version"
         "fd:fd --version"
-        "zoxide:zoxide --version"
         "atuin:atuin --version"
         "lazygit:lazygit --version"
         "just:just --version"
