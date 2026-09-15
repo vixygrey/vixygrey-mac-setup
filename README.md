@@ -406,7 +406,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **mise** | Manages Node and Python here while replacing separate per-language version managers |
 | **micro** | The `$EDITOR` -- git/gh/lazygit commit messages, leaf's Ctrl+E, quick edits. Non-modal, on-screen key menu (`Ctrl+G` for help), Dracula theme |
 | **Croft** | VS Code-style terminal IDE with LSP, debugging, source control, PDF previews, and a Dracula-Sakura theme |
-| **Kiro** | Native agent-centric editor with 30 curated registry extensions, merged extension defaults, and Dracula-Sakura |
+| **Kiro** | Native agent-centric editor with 28 curated registry extensions, merged extension defaults, and Dracula-Sakura |
 | **omp** | Oh My Pi coding agent with LSP, DAP, subagents, and role-based routing across Codex, Gemini, Claude Sonnet, and local llama.cpp |
 | **chezmoi** | Dotfile manager -- backup and restore configs across machines |
 | **Kitty** | Fast GPU-accelerated terminal with native macOS support |
@@ -420,7 +420,7 @@ The generated OMP policy selects Pyright for Python type intelligence and Ruff f
 | **cargo-edit** | Manage Cargo dependencies from the command line |
 | **MCP Inspector** | Inspect and debug Model Context Protocol servers |
 
-Kiro installs the active extension set from the maintainer's workstation. The set covers AWS, containers, Python, Rust, C#, web, markup, linting, formatting, debugging, Git, and editor ergonomics.
+Kiro installs the active extension set from the maintainer's workstation. The set covers AWS, containers, Python, Rust, web, markup, linting, formatting, debugging, Git, and editor ergonomics.
 
 The setup copies the shared Oh My Pi `AGENTS.md` instructions into Kiro's global steering directory at `~/.kiro/steering/AGENTS.md`.
 
