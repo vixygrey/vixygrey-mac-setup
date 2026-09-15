@@ -168,7 +168,6 @@ jobs:
           SCRIPT|bash -n /tmp/generated
           DOCKER_CONF|jq empty /tmp/generated
           FASTFETCH_CONF|jq empty /tmp/generated
-          MPROCS_CONF|yq eval '.' /tmp/generated
           JQP_CONF|yq eval '.' /tmp/generated
           GEM_CONF|yq eval '.' /tmp/generated
           GHOSTTY_PLIST_EOF|python3 -c 'import plistlib, sys; plistlib.load(open("/tmp/generated","rb"))'
@@ -197,8 +196,6 @@ jobs:
           TRIPPY_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           HARLEQUIN_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           EILMELDUNG_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
-          CONCORD_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
-          CONCORD_THEME_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           SPOTATUI_CONF|yq eval '.' /tmp/generated
           CFAIT_CONF|python3 -c 'import tomllib; tomllib.load(open("/tmp/generated","rb"))'
           CHECKS
