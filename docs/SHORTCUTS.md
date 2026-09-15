@@ -16,7 +16,6 @@ Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, an
 | `lt` | `eza --tree --icons --level=3` | Tree view (3 levels deep) |
 | `cat` | `bat --paging=never` | Syntax-highlighted file viewer |
 | `top` | `btop` | Graphical system monitor |
-| `du` | `dust` | Visual disk usage tree |
 | `df` | `duf` | Colorful disk usage table |
 | `ps` | `procs` | Sortable process list (Docker-aware) |
 | `ping` | `gping` | Real-time latency graph |
@@ -27,7 +26,6 @@ Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, an
 | `f` | `fd` | Fast file finder |
 | `dft` | `difft` | Syntax-aware structural diff |
 | `y` | Yazi shell wrapper | Open Yazi and keep its directory after `q` |
-| `br` | Broot shell wrapper | Browse a directory tree and keep directory changes after exit |
 | `jx` | `fx` | Interactive JSON viewer |
 
 
@@ -79,10 +77,6 @@ Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, an
 | Alias | Runs | What it does |
 |-------|------|-------------|
 | `md` | `leaf` | Render Markdown in the terminal |
-| `serve` | `miniserve --color-scheme-dark dracula -qr .` | Quick file server |
-| `csvp` | `csvlook` | Pretty-print CSV as table |
-| `ytdl` | `yt-dlp` | Download video |
-| `ytmp3` | `yt-dlp -x --audio-format mp3` | Download audio as MP3 |
 | `resize` | `magick mogrify -resize` | Resize images |
 | `md2pdf` | `pandoc -f markdown -t pdf` | Markdown to PDF |
 | `md2html` | `pandoc -f markdown -t html -s` | Markdown to HTML |
@@ -105,16 +99,6 @@ Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, an
 | `claws` | `claws --read-only` | Open the AWS TUI with writes disabled |
 | `nerdlog` | `nerdlog --set transport=ssh-bin` | Use the generated OpenSSH config for multi-host logs |
 
-### Directory Shortcuts (via zoxide)
-
-| Alias | Jumps to | What it does |
-|-------|----------|-------------|
-| `cw` | `~/Code/work` | Work projects |
-| `cper` | `~/Code/personal` | Personal projects |
-| `coss` | `~/Code/oss` | Open source |
-| `clearn` | `~/Code/learning` | Learning/courses |
-| `cscratch` | `~/Code/work/scratch` | Scratch experiments |
-| `cscripts` | `~/Scripts` | Custom scripts |
 
 ### Helper Scripts
 
@@ -540,9 +524,8 @@ Use current in-app help or upstream documentation because default bindings can c
 | `fx` | `?` | current [key bindings](https://fx.wtf/key-bindings) |
 | `gh-dash`, `posting`, `caligula`, `nerdlog` | in-app | upstream help and manuals do not publish a stable keymap table |
 | `viddy` | `?` | upstream [README keymap](https://github.com/sachaos/viddy#keymaps) |
-| `mprocs` | visible keymap pane and `p` | [legacy mprocs default keymap](https://github.com/pvolok/dekit/blob/master/README-mprocs.md#default-keymap) in the renamed dekit repository |
 | `cha` | in-app | the man page carries no complete keybindings section |
-| `broot`, `e2c`, `claws`, `chamber`, `leaf`, `emeraldian`, `watchtower`, `eilmeldung`, `concord`, `cfait`, `lazyssh`, `lazyrsync`, `lazynpm`, `cheznav`, `croft`, `spotatui`, `cliamp`, `mullvad-tui` | in-app | no house keymap. Use the current application help |
+| `e2c`, `claws`, `chamber`, `leaf`, `emeraldian`, `eilmeldung`, `cfait`, `lazyssh`, `lazyrsync`, `lazynpm`, `cheznav`, `croft`, `spotatui`, `cliamp`, `mullvad-tui` | in-app | no house keymap. Use the current application help |
 
 
 ---

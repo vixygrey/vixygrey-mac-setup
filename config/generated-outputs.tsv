@@ -12,7 +12,6 @@ k9s-library-skin|$HOME/Library/Application Support/k9s/skins/dracula.yaml|supers
 k9s-library-config|$HOME/Library/Application Support/k9s/config.yaml|superseded|yaml|configs|yq|none
 shellcheck-rc|$SHELLCHECK_RC|managed|shell|configs|bash|none
 leaf-config|$LEAF_CONFIG|managed|text|configs|none|none
-yt-dlp-config|$YT_DLP_CONFIG|managed|text|configs|none|none
 act-config|$ACT_CONFIG|managed|text|configs|none|none
 tflint-config|$HOME/.tflint.hcl|superseded|text|configs|none|none
 trippy-config|$TRIPPY_CONFIG|managed|text|configs|none|none
@@ -43,9 +42,6 @@ nanorc|$NANORC|managed|text|configs|none|none
 mise-config|$MISE_CONFIG|managed|text|configs|none|mise
 topgrade-config|$TOPGRADE_CONFIG|managed|text|configs|none|topgrade
 fastfetch-config|$FASTFETCH_CONFIG|managed|text|configs|none|fastfetch
-mprocs-config|$MPROCS_CONFIG|managed|text|configs|none|none
-broot-config|$BROOT_CONF|managed|text|configs|none|none
-broot-skin|$BROOT_SKIN|managed|text|configs|none|none
 jqp-config|$JQP_CONFIG|managed|text|configs|none|none
 ripgreprc|$RIPGREPRC|managed|text|configs|none|ripgrep
 fdignore|$FDIGNORE|managed|text|configs|none|none
@@ -95,8 +91,6 @@ obsidian-appearance|$OBSIDIAN_VAULT/.obsidian/appearance.json|merged|json|config
 herald-theme|$HERALD_THEME_FILE|generated|yaml|configs|yq|none
 herald-config|$HERALD_CONFIG|merged|yaml|configs|yq|none
 eilmeldung-config|$EILMELDUNG_CONFIG|managed|toml|configs|taplo|eilmeldung
-concord-config|$CONCORD_CONFIG|managed|toml|configs|taplo|concord
-concord-theme|$CONCORD_THEME|managed|toml|configs|taplo|concord
 spotatui-config|$SPOTATUI_CONFIG|seed|yaml|configs|yq|spotatui
 cfait-config|$CFAIT_CONFIG|seed|toml|configs|taplo|cfait
 docker-daemon|$DOCKER_DAEMON|merged|json|configs|jq|none
@@ -132,3 +126,9 @@ retired-lazyenv-config|$HOME/Library/Application Support/lazyenv/config.toml|sup
 retired-git-cliff-config|$HOME/.config/git-cliff/cliff.toml|superseded|toml|configs|taplo|none
 retired-pgcli-config|$HOME/.config/pgcli/config|superseded|text|configs|none|none
 retired-mycli-config|$HOME/.myclirc|superseded|text|configs|none|none
+retired-yt-dlp-config|$HOME/.config/yt-dlp/config|superseded|text|configs|none|none
+retired-concord-config|$HOME/.config/concord/config.toml|superseded|toml|configs|taplo|none
+retired-concord-theme|$HOME/.config/concord/theme.toml|superseded|toml|configs|taplo|none
+retired-mprocs-config|$HOME/.config/mprocs/mprocs.yaml|superseded|text|configs|none|none
+retired-broot-config|$HOME/.config/broot/conf.hjson|superseded|text|configs|none|none
+retired-broot-skin|$HOME/.config/broot/skins/dracula-sakura.hjson|superseded|text|configs|none|none

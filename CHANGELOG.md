@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Removed
 - Removed global Git hook creation and cleaned generator-owned hooks from provisioned machines (#636).
+- Removed dust, zoxide, mprocs, Steampipe, miniserve, monolith, pv, csvkit, scc, Carbonyl, terraform-docs, yt-dlp, tlrc, choose, Broot, Watchtower, Concord, and Firefox with generator-owned config cleanup (#638).
 
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD
