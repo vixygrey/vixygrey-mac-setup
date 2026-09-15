@@ -4279,7 +4279,6 @@ kiro_extension_install "christian-kohler.path-intellisense" "Path Intellisense"
 kiro_extension_install "coenraads.bracket-pair-colorizer-2" "Bracket Pair Colorizer 2"
 kiro_extension_install "davidanson.vscode-markdownlint" "markdownlint"
 kiro_extension_install "dbaeumer.vscode-eslint" "ESLint"
-kiro_extension_install "dotnetdev-kr-custom.csharp" "C#"
 kiro_extension_install "ecmel.vscode-html-css" "HTML CSS Support"
 kiro_extension_install "editorconfig.editorconfig" "EditorConfig"
 kiro_extension_install "esbenp.prettier-vscode" "Prettier"
@@ -4288,7 +4287,6 @@ kiro_extension_install "gruntfuggly.todo-tree" "Todo Tree"
 kiro_extension_install "llvm-vs-code-extensions.lldb-dap" "LLDB DAP"
 kiro_extension_install "mikestead.dotenv" "DotENV"
 kiro_extension_install "ms-azuretools.vscode-containers" "Container Tools"
-kiro_extension_install "ms-dotnettools.vscode-dotnet-runtime" ".NET Install Tool"
 kiro_extension_install "ms-python.debugpy" "Python Debugger"
 kiro_extension_install "ms-python.python" "Python"
 kiro_extension_install "oderwat.indent-rainbow" "indent-rainbow"
@@ -5984,8 +5982,6 @@ KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
   "containers.images.checkForOutdatedImages": false,
   "containers.networks.showBuiltInNetworks": false,
   "containers.enableComposeLanguageService": true,
-  "dotnetAcquisitionExtension.enableTelemetry": false,
-  "dotnetAcquisitionExtension.enablePreviewFeatures": false,
   "python.analysis.autoImportCompletions": true,
   "python.analysis.diagnosticMode": "openFilesOnly",
   "python.analysis.typeCheckingMode": "standard",
@@ -6101,10 +6097,6 @@ KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
   },
   "[xml]": {
     "editor.defaultFormatter": "redhat.vscode-xml"
-  },
-  "[csharp]": {
-    "editor.defaultFormatter": "dotnetdev-kr-custom.csharp",
-    "editor.tabSize": 4
   },
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
