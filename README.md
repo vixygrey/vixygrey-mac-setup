@@ -89,10 +89,8 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 
 > **A category installs its tools; it does not configure them.** Every generated
 > config file is written in the `configs` category (plus starship in `dracula`,
-> `~/Scripts` in `filesystem`, `~/.zshrc` in `shell`) — so `--only git` installs git
-> tooling but refreshes none of its configuration, including the global pre-commit
-> hook. Pair them: `--only git,configs`. The run prints a reminder when `--only`
-> would skip the configuration for what you selected.
+> `~/Scripts` in `filesystem`, and `~/.zshrc` in `shell`). The run prints a
+> reminder when `--only` would skip the configuration for a selected category.
 
 ## What It Does
 
@@ -778,7 +776,7 @@ The script generates config files with sensible defaults:
 | `~/.harlequin.toml` | harlequin | Built-in Dracula theme, vscode keymap, file tree on |
 | `~/.config/gh/config.yml` | GitHub CLI | SSH protocol, micro editor, delta pager, aliases (co, pv, pc, pl, il, pm, rel) |
 | `~/.aws/config` | AWS CLI | Default region, json output, bat pager, auto-prompt, SSO template |
-| `~/.config/git/hooks/` | git | Global pre-commit hooks (debug statements, large files >5MB, conflict markers) |
+| `~/.gitconfig` | git | Global Git settings, including delta and commit behavior |
 | `~/.config/brewfile/Brewfile` | Homebrew | Snapshot of all installed packages with descriptions |
 | `~/.justfile` | just | Global recipes for system, git, Docker, network, cleanup, and project information |
 | `~/.shellcheckrc` | shellcheck | External sources, disabled false positives |
@@ -797,7 +795,7 @@ The script generates config files with sensible defaults:
 | `~/.nanorc` | nano | Line numbers, auto-indent, mouse, syntax highlighting |
 | `~/.gemrc` | Ruby | No docs on gem install |
 | `~/.config/lazygit/config.yml` | lazygit | Dracula-Sakura theme, delta pager, Nerd Fonts, auto-fetch, micro editor, and rounded borders |
-| `~/.local/bin/*` | mise | Links non-Python mise shims for git hooks, launchd jobs, editors, and non-zsh shells |
+| `~/.local/bin/*` | mise | Links non-Python mise shims for launchd jobs, editors, and non-zsh shells |
 
 ---
 
