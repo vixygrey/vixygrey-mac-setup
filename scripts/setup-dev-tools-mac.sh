@@ -12346,7 +12346,6 @@ alias lzd="lazydocker"
 
 # -- File Tools ---------------------------------------------------------------
 alias md="leaf"
-alias csvp="csvlook"
 alias resize="magick mogrify -resize"
 # No `pip` alias. Bare `pip` is not installed, so the alias only redirected muscle
 # memory — and it redirected badly: `pip install X` became `uv pip install X`,
@@ -12427,6 +12426,7 @@ if [[ -o interactive ]] && [[ "$TERM_PROGRAM" != "vscode" ]] && [[ -z "$INSIDE_E
         printf "\033[38;2;139;233;253m  shell\033[0m      \033[38;2;248;248;242mzsh %s\033[0m\n\n" \
             "$ZSH_VERSION"
     fi
+fi
 
 MANAGED_ZSHRC
 configured "$HOME/.zshrc created (PATH, aliases, tool initialization, Dracula-Sakura welcome screen)"
