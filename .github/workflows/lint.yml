@@ -165,9 +165,6 @@ jobs:
           MANAGED_ZSHRC|zsh -n /tmp/generated
           ZSHENV_CONF|zsh -n /tmp/generated
           ZPROFILE_CONF|zsh -n /tmp/generated
-          HOOK_CHAIN_LIB|bash -n /tmp/generated
-          HOOK_DELEGATOR|bash -n /tmp/generated
-          HOOK_PRECOMMIT|bash -n /tmp/generated
           SCRIPT|bash -n /tmp/generated
           DOCKER_CONF|jq empty /tmp/generated
           FASTFETCH_CONF|jq empty /tmp/generated

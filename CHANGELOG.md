@@ -11,7 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 - Changed the default OMP model from GPT-5.6-Luna to GPT-5.6-Terra (#634).
 
-- Correct generated Desktop documentation for commands, safety, installed tools, and post-setup verification (#630).
+
+### Removed
+- Removed global Git hook creation and cleaned generator-owned hooks from provisioned machines (#636).
+
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD
 

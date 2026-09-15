@@ -442,7 +442,7 @@ ALL_CATEGORIES=(
 declare -A CATEGORY_DESC=(
     [prerequisites]="Xcode CLI Tools, Homebrew, GNU coreutils"
     [core]="mise (Node, Python), Go, Rust, uv, pnpm, PyYAML helper venv"
-    [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework (hooks + config: configs)"
+    [git]="Git, GitHub CLI, delta, lazygit, pre-commit framework"
     [aws]="AWS CLI, CDK, SAM, Granted, cfn-lint, e1s/e2c/stu/claws (TUIs), s5cmd, steampipe, dynein, iamlive"
     [iac]="terraform-docs, checkov"
     [security]="gitleaks, trivy, semgrep, Objective-See, Bitwarden, chamber"
@@ -465,7 +465,7 @@ declare -A CATEGORY_DESC=(
     [mac-media]="mpv, oxipng, jpegoptim, cliamp, spotatui"
     [mac-cloud]="rclone, borg, borgmatic"
     [dracula]="Dracula-Sakura theme pass for terminal, editor, and TUI surfaces"
-    [configs]="Generated tool config, global git hooks, and omp setup"
+    [configs]="Generated tool config and omp setup"
     [filesystem]="Directory structure, helper scripts, git identity"
     [macos-defaults]="Finder, keyboard, screenshots, Touch ID, DNS"
     [shell]="\$HOME/.zshrc, Brewfile export"
@@ -475,15 +475,15 @@ declare -A CATEGORY_DESC=(
 # A category INSTALLS its tools. It does not CONFIGURE them. Generated config files
 # live in three ordered `configs` segments (with starship in `dracula`, ~/Scripts in
 # `filesystem` and ~/.zshrc in `shell`), so `--only git` installs git tooling and
-# refreshes NONE of its configuration — including the global pre-commit hook — while
-# still reporting "Failed: 0". That silent half-run is #258.
+# refreshes none of its configuration while still reporting "Failed: 0". That
+# silent half-run is #258.
 #
 # This table is what `--only` uses to say so out loud. It is descriptive text only —
 # no control flow keys off it — but a typo'd category name would make a notice
 # silently never appear, so the keys are validated against ALL_CATEGORIES below.
 declare -A CONFIG_LIVES_IN_CONFIGS=(
     [core]="mise, direnv, ~/.npmrc, pip, gemrc"
-    [git]="the global pre-commit hook, lazygit, gh, the commit template, global gitignore"
+    [git]="lazygit, gh, the commit template, global gitignore"
     [aws]="the AWS CLI config (\$HOME/.aws/config), Claws"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
@@ -1175,7 +1175,39 @@ _managed_marker_state() {
     echo invalid
 }
 
-# remove_superseded_managed <file> <explanation> [issue-ref] [comment-prefix]
+# remove_managed_script <file> <explanation>
+# Remove a generator-owned executable while preserving user edits. The shebang is
+# outside the managed block, so it is allowed as the only content outside markers.
+remove_managed_script() {
+    local file="$1" what="$2"
+    [[ -f "$file" ]] || return 0
+    local mb="# >>> dev-setup managed block (do not edit between the markers) >>>"
+    local me="# <<< dev-setup managed block <<<"
+    local state; state="$(_managed_marker_state "$file" "$mb" "$me")"
+    if [[ "$state" == "unmarked" ]]; then
+        warn "Left $file alone — this script did not write it. $what"
+        return 0
+    fi
+    if [[ "$state" != "valid" ]] || [[ "$(sed -n '1p' "$file")" != "#!/usr/bin/env bash" ]]; then
+        warn "Left $file alone — its generated script ownership cannot be proven. $what"
+        return 0
+    fi
+    local outside; outside="$(mktemp)"
+    awk -v mb="$mb" -v me="$me" '
+        NR == 1 { next }
+        index($0, mb) { inb = 1; next }
+        index($0, me) { inb = 0; next }
+        !inb { print }' "$file" > "$outside"
+    if _has_content "$outside"; then
+        warn "Left $file alone — it has edits outside our markers. $what"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove generated global Git hook $file"
+    else
+        rm -f "$file"
+        info "Removed generated global Git hook $file"
+    fi
+    rm -f "$outside"
+}
 # Delete a config file THIS SCRIPT wrote that has since moved to a new path. Only
 # when it is provably ours: our markers present AND nothing outside them — the same
 # test write_managed applies before it deletes an outside region (#259), and for the
@@ -3039,14 +3071,8 @@ if [[ "$VERIFY" == "true" ]]; then
         # comparing, so tools that return absolute paths and tools that return
         # `~/...` are compared against the same string. Cheap high-signal
         # additions from #374.
-        # $HOME/.gitconfig, NOT the XDG path, and that is deliberate (#505). git
-        # writes --global to $XDG_CONFIG_HOME/git/config only when that file
-        # exists AND ~/.gitconfig does not; with ~/.gitconfig present it always
-        # wins (verified against git 2.55). Every provisioned machine already has
-        # one, holding the identity, the includeIf routing and any hand edits, so
-        # moving to XDG would mean relocating a file we did not write and cannot
-        # prove is ours. This row previously named the XDG path, which nothing
-        # writes, so it reported MISSING on every machine forever.
+        # Global Git settings live in ~/.gitconfig on provisioned machines. The
+        # setup still writes Git settings there, but no longer manages global hooks.
         "path|git|$HOME/.gitconfig|_verify_git_config"
         "path|ssh|$HOME/.ssh/config|_verify_ssh_config"
         "path|npm|$HOME/.npmrc|npm config get userconfig 2>/dev/null | tr -d '\n'; echo"
@@ -3073,11 +3099,9 @@ if [[ "$VERIFY" == "true" ]]; then
     # in `echo` to guarantee a trailing newline (some tools print without one and the
     # comparison would fail on the missing byte).
     _verify_git_config() {
-        # --show-origin prints `file:/path/to/git/config\tvalue`. Pull the file field
-        # and strip the `file:` prefix so it matches the `$HOME/.config/git/config`
-        # we wrote. The user's gitconfig may live at ~/.gitconfig instead — that is
-        # surfaced as a real FAIL (the row reports both paths), which is the point.
-        git config --show-origin --get core.hooksPath 2>/dev/null \
+        # --show-origin prints `file:/path/to/git/config<TAB>value`. Use the
+        # configured pager as a stable setting written by this setup.
+        git config --show-origin --get core.pager 2>/dev/null \
             | awk -F'\t' 'NR==1 {sub(/^file:/, "", $1); print $1}'
     }
     _verify_pip_config() {
@@ -9000,266 +9024,37 @@ GIT_TEMPLATE
     git_global commit.template "$GIT_COMMIT_TEMPLATE"
     configured "Git commit template created and registered"
 
-# ---- Global git hooks directory ----
+# ---- Retire global Git hooks ----
+#
+# Older versions created a global hook directory and set core.hooksPath. Remove
+# only generated scripts, and leave foreign files and third-party hook directories.
 GIT_HOOKS_DIR="$HOME/.config/git/hooks"
-info "Configuring global git hooks..."
-
-# Setting core.hooksPath makes git read ONLY this directory: per-repo .git/hooks is
-# never consulted, for any hook type. Shipping just a `pre-commit` here therefore
-# killed every other per-repo hook on the machine — husky's commit-msg, a
-# .pre-commit-config.yaml's pre-push, lint-staged, all of it — silently (#260).
-#
-# So every hook type gets a delegator, and the delegator CHAINS rather than execs:
-# third-party tools write into this same directory, so a delegator that only ran the
-# per-repo hook would silently disable them instead.
-#
-# Deliberately not covered: the server-side hooks (pre-receive, update, post-update,
-# proc-receive), and the hot-path ones where a wrapper costs more than it delivers
-# (reference-transaction, post-index-change, fsmonitor-watchman).
 GIT_HOOK_TYPES=(
     applypatch-msg pre-applypatch post-applypatch
     pre-commit pre-merge-commit prepare-commit-msg commit-msg post-commit
     pre-rebase post-checkout post-merge pre-push post-rewrite
     sendemail-validate
 )
-
-# Shared chain logic, sourced by every delegator. Not named after a hook, so git
-# ignores it; keeping it in one file means the chain semantics can't drift per type.
-write_managed_script "$GIT_HOOKS_DIR/dev-setup-chain.sh" <<'HOOK_CHAIN_LIB'
-#!/usr/bin/env bash
-# Sourced by every hook in this directory. Runs the repository's own hook, then
-# each preserved third-party hook. It stops on the first nonzero status.
-
-run_hook_chain() {
-    local hook="$1"; shift
-    local hooks_dir status=0 stdin_file="" repo_hook f
-    hooks_dir="$(dirname "${BASH_SOURCE[0]}")"
-    DEV_SETUP_REPO_HOOK_RAN=0
-
-    # Buffer stdin once, then give each chained hook its own copy.
-    case "$hook" in
-        pre-push|post-rewrite|push-to-checkout)
-            stdin_file="$(mktemp)"
-            cat > "$stdin_file"
-            ;;
-    esac
-
-    _chain_run() {
-        local script="$1"; shift
-        if [ -n "$stdin_file" ]; then
-            "$script" "$@" < "$stdin_file"
-        else
-            "$script" "$@"
-        fi
-    }
-
-    # 1. The repository's own hook.
-    #
-    #    NOT `git rev-parse --git-path hooks/<type>`: that is itself core.hooksPath
-    #    aware, so with this directory configured it resolves right back to THIS
-    #    delegator, which then runs itself forever — every `git commit` on the machine
-    #    hangs. Use the common git dir instead (common, not absolute: a linked worktree
-    #    has its own gitdir but shares the main repo's hooks/).
-    local common candidate_dir hooks_real
-    common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
-    [ -n "$common" ] || common="$(git rev-parse --git-common-dir 2>/dev/null)"
-    repo_hook=""
-    if [ -n "$common" ]; then
-        # Belt and braces: if the repo's hooks dir IS this directory, there is no
-        # per-repo hook to run — only this delegator, and re-entering it recurses.
-        hooks_real="$(cd "$hooks_dir" 2>/dev/null && pwd -P)"
-        candidate_dir="$(cd "$common/hooks" 2>/dev/null && pwd -P)"
-        if [ -n "$candidate_dir" ] && [ "$candidate_dir" != "$hooks_real" ]; then
-            repo_hook="$common/hooks/$hook"
-        fi
-    fi
-
-    if [ -n "$repo_hook" ] && [ -x "$repo_hook" ]; then
-        DEV_SETUP_REPO_HOOK_RAN=1
-        _chain_run "$repo_hook" "$@" || status=$?
-        if [ "$status" -ne 0 ]; then
-            [ -n "$stdin_file" ] && rm -f "$stdin_file"
-            return "$status"
-        fi
-    fi
-
-    # 2. Third-party hooks preserved when a delegator took their name.
-    if [ -d "$hooks_dir/$hook.d" ]; then
-        for f in "$hooks_dir/$hook.d"/*; do
-            [ -x "$f" ] || continue
-            _chain_run "$f" "$@" || status=$?
-            if [ "$status" -ne 0 ]; then
-                [ -n "$stdin_file" ] && rm -f "$stdin_file"
-                return "$status"
-            fi
-        done
-    fi
-
-    [ -n "$stdin_file" ] && rm -f "$stdin_file"
-    return 0
-}
-HOOK_CHAIN_LIB
-
-# Move a pre-existing third-party hook out of the way so a delegator can take its
-# name, preserving it in <type>.d/ where the chain will still run it. Idempotent: a
-# tool that re-creates its hooks on every invocation would otherwise stack up
-# identical copies, so one that is already preserved is dropped rather than added.
-preserve_foreign_hook() {
-    local type="$1"
-    local path="$GIT_HOOKS_DIR/$type" dest_dir="$GIT_HOOKS_DIR/$type.d" name f
-
-    # Remove Git LFS hooks left by earlier releases. The package is retired, so
-    # these hooks can only fail after its binary disappears.
-    for f in "$dest_dir"/*; do
-        [[ -f "$f" ]] || continue
-        grep -qE 'git[- ]lfs' "$f" 2>/dev/null || continue
-        if [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would remove retired Git LFS hook $type.d/${f##*/}"
-        else
-            rm -f "$f"
-            info "Removed retired Git LFS hook $type.d/${f##*/}"
-        fi
-    done
-    rmdir "$dest_dir" 2>/dev/null || true
-
-    [[ -f "$path" ]] || return 0
-    grep -qF "dev-setup managed block" "$path" 2>/dev/null && return 0
-
-    if grep -qE 'git[- ]lfs' "$path" 2>/dev/null; then
-        if [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would remove retired global Git LFS $type hook"
-        else
-            rm -f "$path"
-            info "Removed retired global Git LFS $type hook"
-        fi
-        return 0
-    fi
-
-    name="10-preexisting"
-    if [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would preserve third-party $type hook as $type.d/$name"
-        return 0
-    fi
-    mkdir -p "$dest_dir"
-    for f in "$dest_dir"/*; do
-        [[ -f "$f" ]] || continue
-        if cmp -s "$path" "$f"; then rm -f "$path"; return 0; fi
-    done
-    [[ -e "$dest_dir/$name" ]] && name="${name}.$(date +%Y%m%d%H%M%S)"
-    mv "$path" "$dest_dir/$name"
-    chmod +x "$dest_dir/$name"
-    info "Preserved third-party $type hook as $type.d/$name (#260)"
-}
-
-# Delegators for every type except pre-commit, which carries this script's own checks
-# after the chain. The body is identical for all of them: the hook derives its own
-# name from $0, so one quoted heredoc serves the whole list.
-for _hook_type in "${GIT_HOOK_TYPES[@]}"; do
-    [[ "$_hook_type" == "pre-commit" ]] && continue
-    preserve_foreign_hook "$_hook_type"
-    write_managed_script "$GIT_HOOKS_DIR/$_hook_type" <<'HOOK_DELEGATOR'
-#!/usr/bin/env bash
-# Global hook delegator — core.hooksPath means git reads only this directory, so this
-# runs the repo's own hook of the same name plus any third-party hook in <type>.d/.
-_lib="$(dirname "$0")/dev-setup-chain.sh"
-# Never block a git operation because the helper is missing.
-[ -r "$_lib" ] || exit 0
-# shellcheck source=/dev/null
-. "$_lib"
-run_hook_chain "$(basename "$0")" "$@"
-HOOK_DELEGATOR
+for _hook_type in dev-setup-chain.sh "${GIT_HOOK_TYPES[@]}"; do
+    remove_managed_script "$GIT_HOOKS_DIR/$_hook_type" \
+        "global Git hooks are no longer created"
 done
 unset _hook_type
 
-# Pre-commit hook: chain first, then this script's own checks
-preserve_foreign_hook pre-commit
-write_managed_script "$GIT_HOOKS_DIR/pre-commit" <<'HOOK_PRECOMMIT'
-#!/usr/bin/env bash
-# Global pre-commit hook — runs on ALL repos
-# Note: core.hooksPath overrides per-repo .git/hooks, so this delegates first (#260)
-
-_lib="$(dirname "$0")/dev-setup-chain.sh"
-if [ -r "$_lib" ]; then
-    # shellcheck source=/dev/null
-    . "$_lib"
-    run_hook_chain pre-commit "$@" || exit $?
-    # A repo with its own pre-commit hook owns the policy: this hook used to `exec` it,
-    # so its checks never ran alongside. Preserved deliberately — running the generic
-    # checks too would start blocking commits that were fine yesterday.
-    [ "${DEV_SETUP_REPO_HOOK_RAN:-0}" = "1" ] && exit 0
-fi
-
-# Check for leftover debug statements — scoped per language so shell/markdown/config
-# files aren't false-flagged for merely *mentioning* a debug token (e.g. a script that
-# documents `console.log`, or docs with a `debugger` example). Add a trailing `debug-ok`
-# comment to whitelist an intentional line. (-z/-r: handle spaces in names + empty set.)
-debug_hits=""
-while IFS= read -r -d '' f; do
-    case "$f" in
-        *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs|*.vue|*.svelte|*.astro) pat='console\.log\|debugger' ;;
-        *.py)              pat='import pdb\|pdb\.set_trace\|breakpoint()' ;;
-        *.rb|*.rake|*.erb) pat='binding\.pry\|binding\.irb' ;;
-        *) continue ;;
-    esac
-    hits=$(grep -nH "$pat" "$f" 2>/dev/null | grep -v 'debug-ok')
-    [ -n "$hits" ] && debug_hits="${debug_hits}${hits}"$'\n'
-done < <(git diff --cached --name-only --diff-filter=d -z)
-if [ -n "$debug_hits" ]; then
-    echo ""
-    echo "ERROR: Debug statements found in staged files:"
-    printf '%s' "$debug_hits"
-    echo ""
-    echo "Remove them, add a trailing 'debug-ok' comment, or commit with --no-verify to bypass."
-    exit 1
-fi
-
-# Check for large files (> 5MB)
-large_files=$(git diff --cached --name-only --diff-filter=d -z | while IFS= read -r -d '' f; do
-    size=$(wc -c < "$f" 2>/dev/null | tr -d ' ')
-    if [[ "$size" -gt 5242880 ]]; then
-        echo "  $f ($(( size / 1048576 ))MB)"
+_global_hooks_path="$(git config --global --get core.hooksPath 2>/dev/null || true)"
+if [[ "$_global_hooks_path" == "$GIT_HOOKS_DIR" ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would unset generator-owned global core.hooksPath"
+    else
+        git_global --unset core.hooksPath
+        configured "Generator-owned global core.hooksPath removed"
     fi
-done)
-if [[ -n "$large_files" ]]; then
-    echo ""
-    echo "ERROR: Large files detected (>5MB):"
-    echo "$large_files"
-    echo ""
-    echo "Reduce the file size or commit with --no-verify to bypass."
-    exit 1
+fi
+unset _global_hooks_path
+if [[ "$DRY_RUN" != "true" ]]; then
+    rmdir "$GIT_HOOKS_DIR" 2>/dev/null || true
 fi
 
-# Check for merge conflict markers — anchored to line start and requiring the trailing
-# space/ref that real `<<<<<<< `, `||||||| `, `>>>>>>> ` markers always carry, so a
-# markdown setext heading underline (`=======`) or an ASCII rule doesn't false-flag.
-# The angle/pipe markers are unambiguous; a genuine conflict always contains them.
-#
-# Loop rather than `... | xargs -0 -r grep -l`: an `if` on that pipeline tests xargs's
-# status, not grep's, and with an empty staged set `-r` makes xargs run nothing and exit 0
-# — so it reported a conflict precisely when there was nothing to check, blocking every
-# `git commit --amend` that staged no new changes. Same idiom as the two checks above.
-conflict_files=""
-while IFS= read -r -d '' f; do
-    if grep -qE '^(<{7}|>{7}|\|{7}) ' "$f" 2>/dev/null; then
-        conflict_files="${conflict_files}  ${f}"$'\n'
-    fi
-done < <(git diff --cached --name-only --diff-filter=d -z)
-if [ -n "$conflict_files" ]; then
-    echo ""
-    echo "ERROR: Merge conflict markers found in staged files:"
-    printf '%s' "$conflict_files"
-    echo ""
-    echo "Resolve them, or commit with --no-verify to bypass."
-    exit 1
-fi
-
-exit 0
-HOOK_PRECOMMIT
-
-# Register global hooks directory
-git_global core.hooksPath "$GIT_HOOKS_DIR"
-
-configured "Global git hooks created (${#GIT_HOOK_TYPES[@]} delegators + debug/large-file/conflict checks)"
 
 # ---- AWS config ----
 AWS_CONFIG="$HOME/.aws/config"
@@ -13989,7 +13784,8 @@ git rebase -i --autosquash main
 ```
 
 ### `pre-commit` — Git Hook Framework
-A framework for managing git pre-commit hooks — linters, formatters, secret scanners — declared in a single `.pre-commit-config.yaml` instead of hand-rolled shell scripts in `.git/hooks`. It installs and runs a whole toolchain of checks automatically before each commit, and the config is versioned with the repo so every contributor gets the same hooks. Set it up once per project, then forget about it.
+A framework for managing project-local Git hooks. It runs linters, formatters,
+and secret scanners declared in a repository's `.pre-commit-config.yaml`.
 
 ```bash
 # install the hooks defined in .pre-commit-config.yaml
@@ -14000,26 +13796,9 @@ pre-commit run --all-files
 pre-commit autoupdate
 ```
 
-**`pre-commit install` refuses to run on this machine**, and the error does not explain itself:
-
-```
-[ERROR] Cowardly refusing to install hooks with `core.hooksPath` set.
-```
-
-This setup points `core.hooksPath` at `~/.config/git/hooks` (global hooks that run in every
-repo). `pre-commit` will not write into `.git/hooks` while that is set, because git would
-normally ignore what it wrote. Here it would not — the global hooks **delegate** to the
-per-repo hook of the same name — but `pre-commit` has no way to know that. Unset it for the
-length of the install:
-
-```bash
-saved=$(git config --global --get core.hooksPath)
-git config --global --unset core.hooksPath
-pre-commit install --install-hooks
-git config --global core.hooksPath "$saved"
-```
-
-The hooks it writes then run normally, chained after the global checks.
+`pre-commit install` writes the hook into the repository's `.git/hooks`
+directory. The setup does not set a global `core.hooksPath`, so Git uses the
+repository hook normally.
 
 ### `scc` — Source Code Counter
 Counts lines of code by language across a codebase, along with cyclomatic complexity and COCOMO cost/effort estimates — a much faster, more informative replacement for `cloc` or `wc -l`. Use it to get a quick sense of a new codebase's size and language mix, or to track complexity trends over time. It's fast enough to run on large monorepos without waiting.

@@ -291,6 +291,52 @@ OUR
     [ "$status" -eq 0 ]
 }
 
+@test "remove_managed_script: removes a generated hook with its shebang (#636)" {
+    run run_with_helpers '
+        cat > "$HOME/hook" <<HOOK
+#!/usr/bin/env bash
+# >>> dev-setup managed block (do not edit between the markers) >>>
+echo generated
+# <<< dev-setup managed block <<<
+HOOK
+        remove_managed_script "$HOME/hook" "test reason"
+        test -e "$HOME/hook" && echo STILL_THERE || echo GONE
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"GONE"* ]]
+}
+
+@test "remove_managed_script: preserves a hook with outside edits (#636)" {
+    run run_with_helpers '
+        cat > "$HOME/hook" <<HOOK
+#!/usr/bin/env bash
+# user edit
+# >>> dev-setup managed block (do not edit between the markers) >>>
+echo generated
+# <<< dev-setup managed block <<<
+HOOK
+        remove_managed_script "$HOME/hook" "test reason"
+        test -e "$HOME/hook"
+    '
+    [ "$status" -eq 0 ]
+}
+
+@test "remove_managed_script: dry-run keeps the generated hook (#636)" {
+    run run_with_helpers '
+        cat > "$HOME/hook" <<HOOK
+#!/usr/bin/env bash
+# >>> dev-setup managed block (do not edit between the markers) >>>
+echo generated
+# <<< dev-setup managed block <<<
+HOOK
+        DRY_RUN=true
+        remove_managed_script "$HOME/hook" "test reason"
+        test -e "$HOME/hook"
+    '
+    [ "$status" -eq 0 ]
+}
+
+
 # ---------------------------------------------------------------------------
 # #530: an opener with no closer (or a stray/reordered closer) used to be
 # treated as "our block" by all three managed writers, which then guessed

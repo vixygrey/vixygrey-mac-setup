@@ -54,9 +54,6 @@ btop-theme|$BTOP_THEME|managed|text|configs|none|none
 btop-old-theme|$BTOP_OLD_THEME|superseded|text|configs|none|none
 lazydocker-config|$LAZYDOCKER_CONFIG|managed|text|configs|none|none
 git-commit-template|$GIT_COMMIT_TEMPLATE|managed|text|configs|none|none
-git-hooks-dir-dev-setup-chain-sh|$GIT_HOOKS_DIR/dev-setup-chain.sh|managed-script|shell|configs|bash|none
-git-hooks-dir-hook-type|$GIT_HOOKS_DIR/$_hook_type|managed-script|text|configs|none|none
-git-hooks-dir-pre-commit|$GIT_HOOKS_DIR/pre-commit|managed-script|text|configs|none|none
 aws-config|$AWS_CONFIG|managed|text|configs|none|none
 gh-config|$GH_CONFIG|managed|text|configs|none|gh
 pip-config|$PIP_CONFIG|managed|text|configs|none|pip
