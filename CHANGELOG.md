@@ -28,6 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 - Restored guarded mise activation for non-interactive zsh shells (#658).
+- Kept cleanup paths recoverable when `trash` is unavailable (#660).
 
 
 

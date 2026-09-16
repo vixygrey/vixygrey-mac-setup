@@ -17,6 +17,7 @@ setup() {
     TEST_TMP="$(mktemp -d)"
     export HOME="$TEST_TMP"
     export SETUP_SCRIPT="$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh"
+    export BASH_BIN="$(command -v bash)"
 
     # Stub bin dir, ahead of everything real.
     STUB="$TEST_TMP/bin"
@@ -109,6 +110,32 @@ teardown() {
     [ "$status" -eq 0 ]
     [ ! -s "$TEST_TMP/brew-uninstall.log" ]
     [[ "$output" != *"Failed to remove ffmpeg"* ]]
+}
+
+@test "cleanup keeps the orphaned Homebrew node tree when trash is unavailable (#660)" {
+    prefix="$TEST_TMP/homebrew"
+    node_modules="$prefix/lib/node_modules"
+    mkdir -p "$node_modules/typescript/bin" "$prefix/bin"
+    touch "$node_modules/typescript/bin/tsc"
+    ln -s ../lib/node_modules/typescript/bin/tsc "$prefix/bin/tsc"
+
+    export HOMEBREW_PREFIX="$prefix"
+    export PATH="$STUB:/usr/bin:/bin:/usr/sbin:/sbin"
+    no_trash_script="$TEST_TMP/setup-without-trash.sh"
+    awk '
+        $0 == "installed() { command -v \"$1\" &>/dev/null; }" {
+            print "installed() { [[ \"$1\" != trash ]] && command -v \"$1\" &>/dev/null; }"
+            next
+        }
+        { print }
+    ' "$SETUP_SCRIPT" > "$no_trash_script"
+    run "$BASH_BIN" "$no_trash_script" --cleanup --no-prompt
+
+    [ "$status" -eq 0 ]
+    [ -d "$node_modules" ]
+    [ -L "$prefix/bin/tsc" ]
+    [[ "$output" == *"Keeping $node_modules and 1 bin symlink(s) — trash is unavailable."* ]]
+    [[ "$output" == *"Install trash and rerun --cleanup."* ]]
 }
 
 

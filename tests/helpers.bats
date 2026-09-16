@@ -1361,3 +1361,41 @@ EOF
     [[ "$output" == *"Keeping ~/.claude.json — this setup did not write this data."* ]]
     [[ "$output" == *"Keeping ~/Library/Thunderbird — this setup did not write this data."* ]]
 }
+
+@test "cleanup_move_to_trash keeps a cleanup path when trash is unavailable (#660)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        warn() { printf "%s\n" "$1"; }
+        mkdir -p "$HOME/managed-app"
+        installed() { [[ "$1" != trash ]] && command -v "$1" &>/dev/null; }
+
+        if cleanup_move_to_trash "$HOME/managed-app" "$HOME/managed-app"; then
+            echo unexpected-move
+        else
+            echo retained
+        fi
+        test -d "$HOME/managed-app"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"retained"* ]]
+    [[ "$output" == *"Keeping $TEST_TMP/managed-app — trash is unavailable."* ]]
+    [[ "$output" == *"Install trash and rerun --cleanup."* ]]
+}
+
+@test "cleanup_move_to_trash moves a cleanup path when trash is available (#660)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        mkdir -p "$HOME/bin" "$HOME/Trash" "$HOME/managed-app"
+        cat > "$HOME/bin/trash" <<"EOF"
+#!/usr/bin/env bash
+mv "$1" "$HOME/Trash/"
+EOF
+        chmod +x "$HOME/bin/trash"
+        export PATH="$HOME/bin:$PATH"
+
+        cleanup_move_to_trash "$HOME/managed-app" "$HOME/managed-app"
+        test ! -e "$HOME/managed-app"
+        test -d "$HOME/Trash/managed-app"
+    '
+    [ "$status" -eq 0 ]
+}

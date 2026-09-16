@@ -1030,6 +1030,22 @@ services_requested() {
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
 
+# cleanup_move_to_trash <path> <label>
+# Keep cleanup recoverable. Caller counts successful moves and handles its own
+# ownership proof. A missing Trash command leaves the candidate untouched.
+cleanup_move_to_trash() {
+    local path="$1" label="$2"
+    if ! installed trash; then
+        warn "Keeping $label — trash is unavailable. Install trash and rerun --cleanup."
+        return 1
+    fi
+    if trash "$path" >> "$LOG_FILE" 2>&1; then
+        return 0
+    fi
+    error "Failed to move $label to Trash"
+    return 1
+}
+
 # cleanup_manual_review <path> <reason>
 # Report a user data path that cleanup cannot prove the generator owns.
 cleanup_manual_review() {
@@ -2689,13 +2705,12 @@ if [[ "$CLEANUP" == "true" ]]; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (not managed by Homebrew, replaced by $replacement)"
                     else
-                        info "Removing $display (not managed by Homebrew, replaced by $replacement)..."
-                        if installed trash; then
-                            trash "/Applications/$appname.app" >> "$LOG_FILE" 2>&1 && success "$display trashed" || error "Failed to remove $display"
+                        info "Moving $display to Trash (not managed by Homebrew, replaced by $replacement)..."
+                        if cleanup_move_to_trash "/Applications/$appname.app" "/Applications/$appname.app"; then
+                            ((CLEANUP_COUNT++)); success "$display moved to Trash"
                         else
-                            sudo_run rm -rf "/Applications/$appname.app" 2>/dev/null && success "$display removed" || error "Failed to remove $display"
+                            ((CLEANUP_SKIPPED++))
                         fi
-                        ((CLEANUP_COUNT++))
                     fi
                 else
                     ((CLEANUP_SKIPPED++))
@@ -2707,19 +2722,23 @@ if [[ "$CLEANUP" == "true" ]]; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
-                        info "Removing $display (replaced by $replacement)..."
-                        sudo_run rm -rf "/Applications/$appname.app" 2>/dev/null || true
-                        ((CLEANUP_COUNT++))
-                        success "$display removed"
+                        info "Moving $display to Trash (replaced by $replacement)..."
+                        if cleanup_move_to_trash "/Applications/$appname.app" "/Applications/$appname.app"; then
+                            ((CLEANUP_COUNT++)); success "$display moved to Trash"
+                        else
+                            ((CLEANUP_SKIPPED++))
+                        fi
                     fi
                 elif [[ -d "/Applications/$appname.app" ]]; then
                     if [[ "$DRY_RUN" == "true" ]]; then
                         info "[DRY RUN] Would remove: $display (replaced by $replacement)"
                     else
-                        info "Removing $display (replaced by $replacement)..."
-                        sudo_run rm -rf "/Applications/$appname.app" 2>/dev/null || true
-                        ((CLEANUP_COUNT++))
-                        success "$display removed"
+                        info "Moving $display to Trash (replaced by $replacement)..."
+                        if cleanup_move_to_trash "/Applications/$appname.app" "/Applications/$appname.app"; then
+                            ((CLEANUP_COUNT++)); success "$display moved to Trash"
+                        else
+                            ((CLEANUP_SKIPPED++))
+                        fi
                     fi
                 else
                     ((CLEANUP_SKIPPED++))
@@ -2957,24 +2976,20 @@ if [[ "$CLEANUP" == "true" ]]; then
                 info "[DRY RUN] Would remove orphaned Homebrew node tree: $_node_modules (${_nm_count} packages, ${_nm_size:-unknown})"
                 info "[DRY RUN] Would remove ${#_nm_links[@]} bin symlink(s) pointing into it (Homebrew's node is gone)"
             else
-                info "Removing orphaned Homebrew node tree (${_nm_count} packages, ${_nm_size:-unknown}) — Homebrew's node is gone..."
-                # Links first: a link into a directory that no longer exists is a
-                # worse state than either end of this operation on its own.
-                for _l in "${_nm_links[@]}"; do
-                    [[ -n "$_l" ]] || continue
-                    rm -f "$_l" 2>/dev/null || warn "Could not remove $_l"
-                done
-                [[ ${#_nm_links[@]} -gt 0 ]] && info "Removed ${#_nm_links[@]} orphaned bin symlink(s)"
-                if installed trash; then
-                    if trash "$_node_modules" >> "$LOG_FILE" 2>&1; then
-                        ((CLEANUP_COUNT++)); success "Homebrew node tree moved to Trash (${_nm_size:-unknown} — empty the Trash to reclaim the space)"
-                    else
-                        error "Failed to remove $_node_modules"
-                    fi
-                elif rm -rf "$_node_modules"; then
-                    ((CLEANUP_COUNT++)); success "Homebrew node tree removed (${_nm_size:-unknown} reclaimed)"
+                if ! installed trash; then
+                    warn "Keeping $_node_modules and ${#_nm_links[@]} bin symlink(s) — trash is unavailable. Install trash and rerun --cleanup."
+                    ((CLEANUP_SKIPPED++))
+                elif cleanup_move_to_trash "$_node_modules" "$_node_modules"; then
+                    # The tree moved successfully, so the exact symlinks that point into
+                    # it can no longer resolve and are safe to remove.
+                    for _l in "${_nm_links[@]}"; do
+                        [[ -n "$_l" ]] || continue
+                        rm -f "$_l" 2>/dev/null || warn "Could not remove $_l"
+                    done
+                    [[ ${#_nm_links[@]} -gt 0 ]] && info "Removed ${#_nm_links[@]} orphaned bin symlink(s)"
+                    ((CLEANUP_COUNT++)); success "Homebrew node tree moved to Trash (${_nm_size:-unknown} — empty the Trash to reclaim the space)"
                 else
-                    error "Failed to remove $_node_modules"
+                    ((CLEANUP_SKIPPED++))
                 fi
             fi
             unset _nm_count _nm_size _nm_links _l
