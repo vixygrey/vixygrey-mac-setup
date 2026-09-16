@@ -238,6 +238,7 @@ FORCE_BREW_UPDATE=false
 FORCE_BREW_DOCTOR=false
 INTERACTIVE=false
 NO_PROMPT=false
+WITH_SERVICES=false
 BREW_INSTALLED_THIS_RUN=false
 BREW_DOCTOR_RAN=false
 SKIP_CATEGORIES=()
@@ -787,6 +788,7 @@ show_help() {
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "                      Add 'configs' to also refresh generated config —"
     echo "                      a category installs its tools but does not configure them"
+    echo "  --with-services     Create the llama.cpp localhost service and the Clipse clipboard listener"
     echo "  --list-categories   List all available categories"
     echo "  --list              List declared Homebrew and npm packages"
     echo "  --version           Show script version"
@@ -804,6 +806,7 @@ show_help() {
     echo "  ./setup-dev-tools-mac.sh --only core,git,aws,dx"
     echo "  ./setup-dev-tools-mac.sh --only git,configs      # git tooling AND its config/hooks"
     echo "  ./setup-dev-tools-mac.sh --only configs          # regenerate every config file"
+    echo "  ./setup-dev-tools-mac.sh --with-services          # Create local background services"
     echo ""
 }
 
@@ -871,6 +874,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --interactive|-i)
             INTERACTIVE=true
+            shift
+            ;;
+        --with-services)
+            WITH_SERVICES=true
             shift
             ;;
         --no-prompt)
@@ -989,6 +996,12 @@ should_run() {
     done
 
     return 0
+}
+
+# services_requested
+# Background services create only after an explicit command-line opt-in.
+services_requested() {
+    [[ "$WITH_SERVICES" == "true" ]]
 }
 
 # -- Utility functions --------------------------------------------------------
@@ -8759,64 +8772,6 @@ if [[ "$DRY_RUN" != "true" ]]; then
 fi
 unset _sketchybar_file
 
-# ---- clipse clipboard listener (launchd agent) ----
-# clipse runs a background listener to capture clipboard history. Register a
-# LaunchAgent so it starts at login.
-#
-# The subcommand matters: `-listen` DAEMONIZES (forks a detached listener and
-# the supervised parent exits immediately). Paired with KeepAlive that made
-# launchd respawn the job every 10s while the previously detached listener kept
-# running — ~110 MB orphaned per respawn, ~40 GB/hour, until the machine ran out
-# of RAM and WindowServer missed its watchdog check-in and hard-reset the Mac.
-# `-listen-darwin` stays in the foreground, which is what launchd needs in order
-# to actually supervise (and restart) a single listener. See #253.
-#
-# This block deliberately does NOT use is_done/`[[ -f ]]` create-once guards:
-# machines provisioned before the fix already have the broken plist on disk, so
-# a create-once block would leave them leaking forever. It rewrites in place
-# whenever the desired content differs, and reaps orphans with `clipse -kill`.
-CLIPSE_BIN="$(command -v clipse || echo "$GOBIN/clipse")"
-CLIPSE_PLIST="$HOME/Library/LaunchAgents/com.clipse.listener.plist"
-if [[ ! -x "$CLIPSE_BIN" ]]; then
-    warn "clipse not installed — skipping clipboard listener agent"
-else
-    CLIPSE_PLIST_WANT="$(cat <<CLIPSE_PLIST_EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key><string>com.clipse.listener</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$CLIPSE_BIN</string>
-        <string>-listen-darwin</string>
-    </array>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
-</dict>
-</plist>
-CLIPSE_PLIST_EOF
-)"
-    if [[ -f "$CLIPSE_PLIST" ]] && [[ "$(cat "$CLIPSE_PLIST")" == "$CLIPSE_PLIST_WANT" ]]; then
-        info "clipse clipboard listener already up to date"
-    elif [[ "$DRY_RUN" == "true" ]]; then
-        info "[DRY RUN] Would (re)install clipse clipboard-listener launch agent"
-    else
-        if [[ -f "$CLIPSE_PLIST" ]]; then
-            info "Repairing clipse clipboard-listener launch agent (respawn leak, #253)..."
-        else
-            info "Creating clipse clipboard-listener launch agent..."
-        fi
-        mkdir -p "$HOME/Library/LaunchAgents"
-        launchctl unload "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || true
-        # Reap any listeners orphaned by the old `-listen` respawn loop.
-        "$CLIPSE_BIN" -kill >> "$LOG_FILE" 2>&1 || true
-        printf '%s\n' "$CLIPSE_PLIST_WANT" > "$CLIPSE_PLIST"
-        launchctl load "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load clipse launch agent"
-        success "clipse clipboard listener registered (starts at login)"
-    fi
-fi
-mark_done "config:clipse"
 
 # ---- email + calendar (herald) ----
 # Herald owns account, server, and credential data. This block manages only a local
@@ -11662,6 +11617,16 @@ OMP_CONFIG_CONF
     # directly, while later setup runs leave the credential file byte-for-byte intact.
 fi
 
+unset OMP_DIR OMP_THEME_DIR OMP_THEME_FILE OMP_SKILLS_DIR OMP_EXTENSIONS_DIR
+unset AGENTS_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE OMP_ENV_FILE
+
+
+fi  # configs
+# =============================================================================
+if services_requested; then
+banner "Background Services"
+info "Creating requested llama.cpp localhost and Clipse clipboard services..."
+
 # Run the Vulkan build as a login service. Port 8081 avoids the local SearXNG
 # endpoint on 8080. OMP reads LLAMA_CPP_BASE_URL from the managed shell block.
 LLAMA_SERVER="$HOME/.local/share/llama.cpp-vulkan/bin/llama-server"
@@ -11721,11 +11686,66 @@ LLAMA_PLIST_EOF
     unset _llama_plist_new
 fi
 unset LLAMA_SERVER LLAMA_MODEL LLAMA_PLIST LLAMA_LOG
-unset OMP_DIR OMP_THEME_DIR OMP_THEME_FILE OMP_SKILLS_DIR OMP_EXTENSIONS_DIR
-unset AGENTS_SKILLS OMP_RETIRED_SKILLS OMP_RETIRED_EXTENSIONS OMP_CONFIG_FILE OMP_ENV_FILE
+# ---- clipse clipboard listener (launchd agent) ----
+# clipse runs a background listener to capture clipboard history. Register a
+# LaunchAgent so it starts at login.
+#
+# The subcommand matters: `-listen` DAEMONIZES (forks a detached listener and
+# the supervised parent exits immediately). Paired with KeepAlive that made
+# launchd respawn the job every 10s while the previously detached listener kept
+# running — ~110 MB orphaned per respawn, ~40 GB/hour, until the machine ran out
+# of RAM and WindowServer missed its watchdog check-in and hard-reset the Mac.
+# `-listen-darwin` stays in the foreground, which is what launchd needs in order
+# to actually supervise (and restart) a single listener. See #253.
+#
+# This block deliberately does NOT use is_done/`[[ -f ]]` create-once guards:
+# machines provisioned before the fix already have the broken plist on disk, so
+# a create-once block would leave them leaking forever. It rewrites in place
+# whenever the desired content differs, and reaps orphans with `clipse -kill`.
+CLIPSE_BIN="$(command -v clipse || echo "$GOBIN/clipse")"
+CLIPSE_PLIST="$HOME/Library/LaunchAgents/com.clipse.listener.plist"
+if [[ ! -x "$CLIPSE_BIN" ]]; then
+    warn "clipse not installed — skipping clipboard listener agent"
+else
+    CLIPSE_PLIST_WANT="$(cat <<CLIPSE_PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.clipse.listener</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$CLIPSE_BIN</string>
+        <string>-listen-darwin</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+</dict>
+</plist>
+CLIPSE_PLIST_EOF
+)"
+    if [[ -f "$CLIPSE_PLIST" ]] && [[ "$(cat "$CLIPSE_PLIST")" == "$CLIPSE_PLIST_WANT" ]]; then
+        info "clipse clipboard listener already up to date"
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would (re)install clipse clipboard-listener launch agent"
+    else
+        if [[ -f "$CLIPSE_PLIST" ]]; then
+            info "Repairing clipse clipboard-listener launch agent (respawn leak, #253)..."
+        else
+            info "Creating clipse clipboard-listener launch agent..."
+        fi
+        mkdir -p "$HOME/Library/LaunchAgents"
+        launchctl unload "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || true
+        # Reap any listeners orphaned by the old `-listen` respawn loop.
+        "$CLIPSE_BIN" -kill >> "$LOG_FILE" 2>&1 || true
+        printf '%s\n' "$CLIPSE_PLIST_WANT" > "$CLIPSE_PLIST"
+        launchctl load "$CLIPSE_PLIST" >> "$LOG_FILE" 2>&1 || warn "Could not load clipse launch agent"
+        success "clipse clipboard listener registered (starts at login)"
+    fi
+fi
+mark_done "config:clipse"
+fi  # services
 
-
-fi  # configs
 
 # =============================================================================
 if should_run "shell"; then
@@ -12061,8 +12081,12 @@ echo "  [~/.herald]             Herald email/calendar config and Dracula-Sakura 
 echo "  [~/.config/eilmeldung] Dracula-Sakura RSS reader theme"
 echo "  [~/.config/spotatui]   User-owned Dracula-Sakura music player seed"
 echo "  [~/.config/cfait]      User-owned local-first task manager seed"
-echo "  [llama.cpp]             Vulkan local model server on 127.0.0.1:8081"
-echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
+if services_requested; then
+    echo "  [llama.cpp]             Vulkan local model server on 127.0.0.1:8081"
+    echo "  [~/.local/share/llama.cpp]  Verified Qwen2.5 Coder GGUF model"
+else
+    echo "  [services]              Run --with-services for llama.cpp and the Clipse clipboard listener"
+fi
 echo "  [leaf]                  Terminal Markdown previewer (live watch, fuzzy picker, Mermaid)"
 echo "  [~/.config/gh-dash]     GitHub dashboard, Dracula-Sakura theme"
 echo "  [~/.config/zellij]      Modern terminal multiplexer with Dracula-Sakura theme"
@@ -12120,6 +12144,7 @@ Complete the manual permissions, credentials, and account steps after the script
 - [ ] Select `~/Media/photos/dracula-sakura.jpg` in System Settings if you want the bundled wallpaper.
 
 ## Local inference
+- [ ] Run `setup-dev-tools-mac.sh --with-services` before you use the local llama.cpp service.
 - [ ] Run `curl -s http://127.0.0.1:8081/v1/models | jq` to confirm the llama.cpp service.
 - [ ] Run `llama-server --list-devices` and confirm that the output lists a Vulkan device.
 - [ ] Set `GEMINI_API_KEY` before you use OMP roles that route to Gemini.
@@ -12193,7 +12218,7 @@ Every binding is on screen: the **key menu** sits along the bottom, and there ar
 |------|-----|
 | `omp` | Primary coding agent with hosted roles and local Vulkan fallback |
 | Kiro | Native project editor with the generated Dracula-Sakura theme |
-| `llama-server` | Local Qwen2.5 Coder endpoint on `127.0.0.1:8081` |
+| `llama-server` | Optional Qwen2.5 Coder endpoint on `127.0.0.1:8081`. Use `--with-services` to start it |
 
 ## Terminal multiplexer & tools
 | Keys | Action |
@@ -12231,7 +12256,7 @@ The setup installs a Dracula-Sakura wallpaper at `~/Media/photos/dracula-sakura.
 - **micro** is the primary editor for files and commit messages.
 - **Kiro** provides a native project editor with practical Code OSS defaults.
 - **OMP** provides coding-agent tools, hosted model roles, and a local fallback.
-- **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan on `127.0.0.1:8081`.
+- **llama.cpp** serves Qwen2.5 Coder 14B through Vulkan after you run `--with-services`.
 
 ## Terminal and search
 - **Kitty** provides the GPU-accelerated terminal with the Dracula-Sakura theme.
@@ -14144,7 +14169,11 @@ echo "  2. Work through ~/Desktop/POST_SETUP_CHECKLIST.md."
 echo "  3. Review KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, and TOOL_REFERENCE.md."
 echo "  4. Log out, then log in to apply the Spotlight and menu bar settings."
 echo "  5. Enable FileVault and the macOS firewall."
-echo "  6. Confirm llama.cpp at http://127.0.0.1:8081/v1/models."
+if services_requested; then
+    echo "  6. Confirm llama.cpp at http://127.0.0.1:8081/v1/models."
+else
+    echo "  6. Run --with-services to create the llama.cpp and Clipse login services."
+fi
 
 # =============================================================================
 # FIRST-RUN SETUP (interactive — only runs if not already configured)

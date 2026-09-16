@@ -734,12 +734,12 @@ The script generates config files with sensible defaults:
 | `~/.omp/agent/themes/dracula-sakura.json` | omp | Full Dracula-Sakura theme, including OMP status-line colors |
 | `~/.omp/agent/config.yml` | omp | Merged because OMP also writes this file. Uses automatic reasoning, workload routing, usage-aware fallback, provider caching, disabled MiniMax, disabled macOS word completion hints, and local Qwen last |
 | `~/.omp/agent/.env` | omp | User-owned seed with blank `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` entries. Later runs leave it unchanged |
-| `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Runs Qwen2.5 Coder 14B on port 8081 with the Vulkan backend |
+| `~/Library/LaunchAgents/dev.vixygrey.llama-cpp.plist` | llama.cpp | Optional `--with-services` launch agent for Qwen2.5 Coder 14B on localhost port 8081 |
 | `~/.config/kitty/kitty.conf` | Kitty | JetBrainsMono Nerd Font, Dracula-Sakura palette, compact padding, integrated titlebar |
 | `~/.config/yazi/yazi.toml` | Yazi | Natural sorting, hidden files, symlink targets, previews |
 | `~/.config/yazi/theme.toml` | Yazi | Dracula-Sakura interface and file-type palette |
 | `~/.config/fastfetch/config.jsonc` | fastfetch | Nerd Font icons, package counts, Node/Python/Go/Rust/Docker versions, battery, disk, colored output |
-| `~/.config/mise/config.toml` | mise | Auto-install, trust ~/Code |
+| `~/.config/mise/config.toml` | mise | Explicit project trust and runtime installation with Node and Python defaults |
 | `~/.config/topgrade.toml` | topgrade | Cleanup, greedy cask updates |
 | `~/.config/direnv/direnv.toml` | direnv | Hidden env diff, auto-trust ~/Code, load .env |
 | `~/.config/btop/` | btop | Dracula-Sakura theme with full color palette |
@@ -874,8 +874,10 @@ All aliases are auto-written to `~/.zshrc`:
 
 **Oh My Pi** (`omp`) is the primary coding agent.
 
-The setup also builds llama.cpp from source with Vulkan enabled and Metal disabled.
-The login service exposes Qwen2.5 Coder 14B at `http://127.0.0.1:8081`.
+The setup builds llama.cpp from source with Vulkan enabled and Metal disabled.
+Run `./scripts/setup-dev-tools-mac.sh --with-services` to create the local services.
+The llama.cpp service exposes Qwen2.5 Coder 14B at `http://127.0.0.1:8081`.
+The Clipse listener captures clipboard history at login.
 
 ```bash
 omp

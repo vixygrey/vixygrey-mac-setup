@@ -1308,3 +1308,14 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = "SKIP" ]
 }
+
+@test "services_requested requires an explicit opt-in (#650)" {
+    run run_with_helpers '
+        WITH_SERVICES=false
+        services_requested && echo DEFAULT_ENABLED || echo DEFAULT_DISABLED
+        WITH_SERVICES=true
+        services_requested && echo EXPLICIT_ENABLED || echo EXPLICIT_DISABLED
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = $'DEFAULT_DISABLED\nEXPLICIT_ENABLED' ]
+}
