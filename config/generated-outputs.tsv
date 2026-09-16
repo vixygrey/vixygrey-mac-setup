@@ -100,7 +100,7 @@ ngrok-config|$NGROK_CONFIG|seed|yaml|configs|yq|ngrok
 gitconfig-work|$GITCONFIG_WORK|create-once|gitconfig|configs|git|none
 gitconfig-personal|$GITCONFIG_PERSONAL|create-once|gitconfig|configs|git|none
 omp-dir-agents-md|$OMP_DIR/AGENTS.md|generated|markdown|configs|none|none
-llama-cpp-launch-agent|$LLAMA_PLIST|generated|plist|configs|plutil|none
+llama-cpp-launch-agent|$LLAMA_PLIST|generated|plist|services|plutil|none
 bat-config|$BAT_CONFIG_DIR/config|merged|text|configs|none|bat
 git-global-config|$HOME/.gitconfig|merged|gitconfig|configs|git|git
 global-ignore|$GLOBAL_IGNORE|managed|text|configs|none|none

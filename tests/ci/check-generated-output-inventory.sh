@@ -11,7 +11,7 @@ awk -F'|' '
 BEGIN {
     policies["managed"]; policies["managed-script"]; policies["generated"]
     policies["merged"]; policies["seed"]; policies["create-once"]; policies["superseded"]
-    categories["configs"]; categories["always"]
+    categories["configs"]; categories["always"]; categories["services"]
     parsers["none"]; parsers["jq"]; parsers["taplo"]; parsers["yq"]
     parsers["plutil"]; parsers["bash"]; parsers["zellij"]; parsers["git"]
 }
