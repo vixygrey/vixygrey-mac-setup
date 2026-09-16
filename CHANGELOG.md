@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
-## [Unreleased]
+## [8.4.0] - 2026-09-16
 
 ### Changed
 - Changed the default OMP model from GPT-5.6-Luna to GPT-5.6-Terra (#634).
@@ -35,7 +35,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 
 
-[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD
+[8.4.0]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...v8.4.0
 
 ## [8.3.0] - 2026-09-12
 
