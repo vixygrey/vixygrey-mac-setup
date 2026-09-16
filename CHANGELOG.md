@@ -30,6 +30,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Restored guarded mise activation for non-interactive zsh shells (#658).
 - Kept cleanup paths recoverable when `trash` is unavailable (#660).
 - Used the declared Python runtime for every uv-managed helper environment (#659).
+- Pinned setup and CI supply-chain dependencies and added local-build release reviews (#661).
 
 
 

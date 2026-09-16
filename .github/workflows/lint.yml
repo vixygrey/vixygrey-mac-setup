@@ -14,7 +14,7 @@ jobs:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Syntax check (bash -n)
         run: bash -n scripts/setup-dev-tools-mac.sh
       - name: Install ShellCheck
@@ -26,11 +26,11 @@ jobs:
     name: Actionlint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Run actionlint
-        uses: rhysd/actionlint@v1.7.12
+        uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
 
   unit-tests:
     name: Helper unit tests
@@ -41,11 +41,13 @@ jobs:
     # by hand — automated. The suite starts with the highest-blast-radius helpers
     # (write_managed, remove_superseded_managed, _trim_blank_edges) and grows.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install bats
         run: sudo apt-get update && sudo apt-get install -y bats zsh
       - name: Check generated-output inventory
         run: tests/ci/check-generated-output-inventory.sh
+      - name: Check supply-chain policy
+        run: tests/ci/check-supply-chain.sh
       - name: Run tests
         run: bats tests/
 
@@ -65,7 +67,7 @@ jobs:
     # Runs on ubuntu-latest — no Homebrew needed. Cached formula.json / cask.json
     # keyed by date so a 48 MB download does not run on every PR.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Resolve cache key (UTC date)
@@ -73,13 +75,13 @@ jobs:
         run: echo "value=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
       - name: Cache core formula API
         id: cache-formula
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/formula.json
           key: brew-formula-${{ steps.date.outputs.value }}
       - name: Cache core cask API
         id: cache-cask
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/cask.json
           key: brew-cask-${{ steps.date.outputs.value }}
@@ -108,18 +110,50 @@ jobs:
     # (#329). Parsing is necessary, not sufficient — when you add a row here, also
     # check the tool still reads that path and those keys.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install parsers
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y zsh
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh \
-            | bash -s -- --tag 1.42.4 --to /usr/local/bin
-          sudo curl -fsSL -o /usr/local/bin/yq \
-            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-          curl -fsSL https://bun.sh/install | bash
+          sudo apt-get install -y unzip zsh
+
+          JUST_ARCHIVE="/tmp/just-1.42.4-x86_64-unknown-linux-musl.tar.gz"
+          JUST_DIR="/tmp/just-1.42.4"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error --retry 3 \
+            "https://github.com/casey/just/releases/download/1.42.4/just-1.42.4-x86_64-unknown-linux-musl.tar.gz" \
+            -o "$JUST_ARCHIVE"
+          printf '%s  %s\n' \
+            "678efc1cfbd5fa5a88375daa7e2f3864a049d6d63a0296df925a2ae5f516cb56" \
+            "$JUST_ARCHIVE" | sha256sum -c -
+          mkdir -p "$JUST_DIR"
+          tar -xzf "$JUST_ARCHIVE" -C "$JUST_DIR"
+          JUST_BIN="$(find "$JUST_DIR" -type f -name just -print -quit)"
+          test -n "$JUST_BIN"
+          sudo install -m 0755 "$JUST_BIN" /usr/local/bin/just
+
+          YQ_BIN="/tmp/yq_linux_amd64"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error --retry 3 \
+            "https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64" \
+            -o "$YQ_BIN"
+          printf '%s  %s\n' \
+            "c5f056448f973ae7d39b5401949648a78f2dc1947d6a8eb65be60d5c504b9385" \
+            "$YQ_BIN" | sha256sum -c -
+          sudo install -m 0755 "$YQ_BIN" /usr/local/bin/yq
+
+          BUN_ARCHIVE="/tmp/bun-linux-x64.zip"
+          BUN_DIR="/tmp/bun-v1.4.2"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error --retry 3 \
+            "https://github.com/oven-sh/bun/releases/download/bun-v1.4.2/bun-linux-x64.zip" \
+            -o "$BUN_ARCHIVE"
+          printf '%s  %s\n' \
+            "36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913" \
+            "$BUN_ARCHIVE" | sha256sum -c -
+          mkdir -p "$BUN_DIR" "$HOME/.bun/bin"
+          unzip -q "$BUN_ARCHIVE" -d "$BUN_DIR"
+          BUN_BIN="$(find "$BUN_DIR" -type f -name bun -print -quit)"
+          test -n "$BUN_BIN"
+          install -m 0755 "$BUN_BIN" "$HOME/.bun/bin/bun"
           echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.bun/bin:$PATH"
           just --version && zsh --version && jq --version && yq --version && bun --version
@@ -240,7 +274,7 @@ jobs:
     # here no matter what it printed — which is why the second step below pins that
     # behaviour rather than trusting it to stay.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       # bash 4+ is a hard prerequisite, not a convenience: the script opens with a 3.2-
       # compatible guard that re-execs under a newer bash and refuses to run without one.

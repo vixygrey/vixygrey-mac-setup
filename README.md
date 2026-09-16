@@ -52,20 +52,26 @@ yaml-py -c 'import yaml; print(yaml.safe_load("a: 1"))'
 omp config get modelRoles               # which model each OMP role uses
 ```
 
-## Bootstrap trust model
+## Bootstrap trust boundary
 
-This repo is a bootstrapper, so a few first-run install paths intentionally trust
-upstream installer scripts rather than shipping vendored payloads here. Today that
-includes:
+This setup downloads and executes three upstream bootstrap installers:
 
-- **Homebrew** — fetched from Homebrew's official install script
-- **rustup** — fetched from `sh.rustup.rs`
-- **pnpm** — fetched from `get.pnpm.io/install.sh`
+- **Homebrew** from Homebrew's official install script.
+- **rustup** from `sh.rustup.rs`.
+- **pnpm** from `get.pnpm.io/install.sh`.
 
-Those installer payloads are **not checksum-pinned by this repo today**. That is a
-practical trade for a one-command setup script, not a claim that the risk is zero.
-If you want to inspect first, run `--dry-run`, read `scripts/setup-dev-tools-mac.sh`,
-and prefer tagged release artifacts with the published SHA256 checksum.
+These installer scripts are deliberate trust exceptions. The repo cannot pin a stable
+version and SHA256 for them. The installer helper verifies a SHA256 value only when
+you set `HOMEBREW_INSTALLER_SHA256`, `RUSTUP_INSTALLER_SHA256`, or `PNPM_INSTALLER_SHA256`.
+
+Review the upstream URL and installer documentation before you run setup. The scheduled
+review workflow reports changes to pinned local builds.
+
+## Pinned local builds
+
+The weekly `Local build review` workflow compares the pinned `llama.cpp` and
+`mullvad-tui` releases with upstream releases. Review a reported release before you
+change a pinned local build.
 
 ## CLI Options
 
