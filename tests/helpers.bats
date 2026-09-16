@@ -44,6 +44,35 @@ run_with_helpers() {
     '
     [ "$status" -eq 0 ]
 }
+
+@test "retire_generator_git_aliases: removes exact destructive aliases only (#647)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        export DRY_RUN=false
+
+        for setting in \
+            "alias.discard|checkout -- ." \
+            "alias.wip|!git add -A && git commit -m '\''WIP'\''" \
+            "alias.save|!git add -A && git commit -m '\''chore: savepoint'\''" \
+            "alias.gone|!git cleanup"; do
+            git config --global "${setting%%|*}" "${setting#*|}"
+        done
+        git config --global alias.cleanup "$GIT_CLEANUP_ALIAS"
+
+        retire_generator_git_aliases
+
+        for key in alias.discard alias.wip alias.save alias.gone alias.cleanup; do
+            ! git config --global --get "$key"
+        done
+
+        git config --global alias.discard "restore --source=HEAD -- ."
+        git config --global alias.cleanup "$GIT_CLEANUP_ALIAS custom"
+        ! retire_generator_git_aliases
+        [ "$(git config --global --get alias.discard)" = "restore --source=HEAD -- ." ]
+        [ "$(git config --global --get alias.cleanup)" = "$GIT_CLEANUP_ALIAS custom" ]
+    '
+    [ "$status" -eq 0 ]
+}
 @test "brew_update_if_due: skips recent metadata" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"

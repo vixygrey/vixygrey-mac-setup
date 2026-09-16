@@ -6,12 +6,15 @@ setup() {
     export GENERATED_CONFIG="$TEST_TMP/config.yml"
     export GENERATED_ENV="$TEST_TMP/.env"
     export GENERATED_MACHINE_SKILL="$TEST_TMP/inspect-machine-SKILL.md"
+    export GENERATED_AWS_CONFIG="$TEST_TMP/aws-config"
     awk "/<<'OMP_CONFIG_CONF'/{f=1;next} /^OMP_CONFIG_CONF$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_CONFIG"
     awk "/<<'OMP_ENV_CONF'/{f=1;next} /^OMP_ENV_CONF$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_ENV"
     awk "/<<'SKILL_INSPECT_MACHINE'/{f=1;next} /^SKILL_INSPECT_MACHINE$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_MACHINE_SKILL"
+    awk "/<<'AWS_CONF'/{f=1;next} /^AWS_CONF$/{f=0} f" \
+        "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_AWS_CONFIG"
 }
 
 teardown() {
@@ -56,6 +59,31 @@ teardown() {
           abort "#{key} changed" unless retry_config.fetch(key) == value
         end
     ' "$GENERATED_CONFIG"
+
+    [ "$status" -eq 0 ]
+}
+
+@test "AWS defaults keep output and retries without an implicit region or prompt mode (#653)" {
+    run ruby -e '
+        sections = Hash.new { |hash, key| hash[key] = {} }
+        current = nil
+        File.foreach(ARGV.fetch(0)) do |line|
+          stripped = line.strip
+          next if stripped.empty? || stripped.start_with?("#", ";")
+          if (match = stripped.match(/^\[(.+)\]$/))
+            current = match[1]
+          elsif current && (match = stripped.match(/^([^=]+?)\s*=\s*(.*)$/))
+            sections[current][match[1].strip] = match[2].strip
+          end
+        end
+
+        default = sections.fetch("default")
+        abort "default region remained" if default.key?("region")
+        abort "default prompt mode remained" if default.key?("cli_auto_prompt")
+        abort "JSON output changed" unless default.fetch("output") == "json"
+        abort "adaptive retries changed" unless default.fetch("retry_mode") == "adaptive"
+        abort "retry count changed" unless default.fetch("max_attempts") == "3"
+    ' "$GENERATED_AWS_CONFIG"
 
     [ "$status" -eq 0 ]
 }
