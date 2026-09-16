@@ -26,6 +26,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Retired the generator-owned global ignore file without deleting user-owned ignore policy (#656).
 - Retired automatic cleanup of generator-unowned agent, credential, mail, and session data (#657).
 
+### Fixed
+- Restored guarded mise activation for non-interactive zsh shells (#658).
+
+
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD
 

@@ -8022,6 +8022,9 @@ ZSHENV="$HOME/.zshenv"
     write_managed "$ZSHENV" "#" <<'ZSHENV_CONF'
 # mise (version manager) is sourced by every zsh invocation. This makes managed
 # runtimes available in interactive shells, IDE terminals, and scripts.
+if command -v mise &>/dev/null; then
+    eval "$(mise activate zsh)"
+fi
 ZSHENV_CONF
     configured "$HOME/.zshenv created (mise activation for all shell types)"
 

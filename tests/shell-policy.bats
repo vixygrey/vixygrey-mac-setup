@@ -4,6 +4,7 @@
 setup() {
     TEST_TMP="$(mktemp -d)"
     export GENERATED_ZPROFILE="$TEST_TMP/zprofile"
+    export GENERATED_ZSHENV="$TEST_TMP/zshenv"
     export GENERATED_ZSHRC="$TEST_TMP/zshrc"
     export SHELL_TEST_HOME="$TEST_TMP/home"
     export SHELL_TEST_BIN="$TEST_TMP/bin"
@@ -13,6 +14,8 @@ setup() {
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_ZPROFILE"
     awk "/<<'MANAGED_ZSHRC'/{f=1;next} /^MANAGED_ZSHRC$/{f=0} f" \
         "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_ZSHRC"
+    awk "/<<'ZSHENV_CONF'/{f=1;next} /^ZSHENV_CONF$/{f=0} f" \
+        "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh" > "$GENERATED_ZSHENV"
 
     printf '%s\n' \
         '#!/bin/sh' \
@@ -20,7 +23,15 @@ setup() {
         '    printf "%s\\n" "export DIRENV_HOOK=loaded"' \
         'fi' > "$SHELL_TEST_BIN/direnv"
     chmod +x "$SHELL_TEST_BIN/direnv"
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'if [ "$1" = activate ] && [ "$2" = zsh ]; then' \
+        '    printf "%s\\n" "export MISE_ACTIVATED=1"' \
+        '    printf "%s\\n" "export PATH=\"\$HOME/mise-bin:\$PATH\""' \
+        'fi' > "$SHELL_TEST_BIN/mise"
+    chmod +x "$SHELL_TEST_BIN/mise"
 }
+
 
 teardown() {
     rm -rf "$TEST_TMP"
@@ -116,4 +127,30 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"hook=unset"* ]]
     [[ "$output" == *"gpg=unset"* ]]
+}
+
+@test "mise activates in zshenv and retains interactive PATH precedence (#658)" {
+    /bin/cp "$GENERATED_ZSHENV" "$SHELL_TEST_HOME/.zshenv"
+    printf '%s\n' 'export PATH="$HOME/later-bin:$PATH"' > "$SHELL_TEST_HOME/.zprofile"
+    printf 'source "%s"\n' "$GENERATED_ZSHRC" > "$SHELL_TEST_HOME/.zshrc"
+
+    run env -i \
+        HOME="$SHELL_TEST_HOME" \
+        ZDOTDIR="$SHELL_TEST_HOME" \
+        PATH="$SHELL_TEST_BIN:/usr/bin:/bin" \
+        zsh -dc 'print -r -- "mise=${MISE_ACTIVATED-unset}"; print -r -- "path=$PATH"'
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"mise=1"* ]]
+    [[ "$output" == *"path=$SHELL_TEST_HOME/mise-bin:"* ]]
+
+    run env -i \
+        HOME="$SHELL_TEST_HOME" \
+        ZDOTDIR="$SHELL_TEST_HOME" \
+        PATH="$SHELL_TEST_BIN:/usr/bin:/bin" \
+        zsh -dlic 'print -r -- "mise=${MISE_ACTIVATED-unset}"; print -r -- "path=$PATH"'
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"mise=1"* ]]
+    [[ "$output" == *"path=$SHELL_TEST_HOME/mise-bin:"*":$SHELL_TEST_HOME/later-bin:"* ]]
 }
