@@ -112,6 +112,7 @@ teardown() {
 }
 
 
+
 @test "an unknown entry type still hits the loud default" {
     # Regression guard for the #242 class: a type matching no arm must warn, not
     # silently no-op. `pnpm` is the realistic typo now that `npm` is a valid key.
