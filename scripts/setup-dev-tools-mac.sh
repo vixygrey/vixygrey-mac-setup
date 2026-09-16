@@ -8093,17 +8093,14 @@ python = "3.12"
 # ruby = "latest"
 
 [settings]
-# Automatically install tools when entering a directory with .mise.toml
-auto_install = true
-
-# Don't prompt to trust config files in ~/Code
-trusted_config_paths = ["~/Code"]
+# Require explicit mise install and trust commands for project configuration.
+auto_install = false
 
 # Quieter output
 quiet = false
 verbose = false
 MISE_CONF
-    configured "mise configured (auto-install, trust ~/Code)"
+    configured "mise configured (explicit install and trust)"
 
 # ---- topgrade config ----
 # `cleanup` is a [misc] key, NOT a top-level one (#366). It sat at the top level here, and
