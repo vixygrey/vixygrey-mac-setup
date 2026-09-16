@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed dust, zoxide, mprocs, Steampipe, miniserve, monolith, pv, csvkit, scc, Carbonyl, terraform-docs, yt-dlp, tlrc, choose, Broot, Watchtower, Concord, and Firefox with generator-owned config cleanup (#638).
 - Removed the Kiro C# and .NET Install Tool extension provisioning (#640).
 - Removed implicit global formatter, network, search, package, SSH, and Git workflow policy from generated machine configuration (#644).
+- Removed destructive global Git aliases and implicit AWS default region and prompt policy (#647, #653).
 
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD

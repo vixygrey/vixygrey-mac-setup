@@ -1132,6 +1132,63 @@ remove_git_global_if_equal() {
     git_global --unset-all "$key"
 }
 
+GIT_CLEANUP_ALIAS='!f() {
+    git fetch --prune --quiet
+    current=$(git branch --show-current)
+    default=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed "s|^origin/||")
+    [ -z "$default" ] && default=main
+    git show-ref --verify --quiet "refs/heads/$default" || default=master
+    stale=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | grep "\[gone\]$" | cut -d" " -f1)
+    merged=""
+    if git show-ref --verify --quiet "refs/heads/$default"; then
+        merged=$(git branch --merged "$default" --format="%(refname:short)" | grep -vx "$default")
+    fi
+    targets=$(printf "%s\n%s\n" "$stale" "$merged" | grep -v "^$" | sort -u)
+    if [ -z "$targets" ]; then
+        echo "Nothing to delete - no branch has a gone upstream or is merged into $default."
+        return 0
+    fi
+    echo "CAUTION: git cleanup permanently deletes the listed local branches."
+    echo "Each deleted branch includes its SHA for recovery."
+    echo "$targets" | while read -r b; do
+        if [ "$b" = "$current" ]; then
+            echo "skipped  $b - checked out, switch away first"
+            continue
+        fi
+        sha=$(git rev-parse --short "$b")
+        if git branch -D "$b" >/dev/null 2>&1; then
+            echo "deleted  $b ($sha) - restore with: git branch $b $sha"
+        else
+            echo "FAILED   $b ($sha)" >&2
+        fi
+    done
+}; f'
+
+# retire_generator_git_aliases
+# Removes only aliases with the exact definitions this generator used to write.
+# Return success when at least one alias was removed or would be removed.
+retire_generator_git_aliases() {
+    local setting key value removed=false
+
+    for setting in \
+        "alias.discard|checkout -- ." \
+        "alias.wip|!git add -A && git commit -m 'WIP'" \
+        "alias.save|!git add -A && git commit -m 'chore: savepoint'" \
+        "alias.gone|!git cleanup"; do
+        key="${setting%%|*}"
+        value="${setting#*|}"
+        if remove_git_global_if_equal "$key" "$value"; then
+            removed=true
+        fi
+    done
+
+    if remove_git_global_if_equal alias.cleanup "$GIT_CLEANUP_ALIAS"; then
+        removed=true
+    fi
+
+    [[ "$removed" == "true" ]]
+}
+
 
 # ensure_dir <dir...>
 # `mkdir -p` that honours --dry-run. Used at the sites a dry run actually reaches —
@@ -5082,6 +5139,13 @@ if (( _retired_git_settings > 0 )); then
 fi
 unset _retired_git_settings
 
+if retire_generator_git_aliases; then
+    configured "Removed generator-owned destructive Git aliases"
+fi
+
+unset -f retire_generator_git_aliases
+
+
 # Display preferences. These affect only explicit Git output, not repository workflow.
 git_global diff.algorithm histogram
 git_global commit.verbose true
@@ -5101,12 +5165,9 @@ git_global alias.sw "switch"
 # Undo & reset
 git_global alias.unstage "reset HEAD --"
 git_global alias.undo "reset --soft HEAD~1"
-git_global alias.discard "checkout -- ."
+
 git_global alias.amend "commit --amend --no-edit"
 
-# Quick commits
-git_global alias.wip "!git add -A && git commit -m 'WIP'"
-git_global alias.save "!git add -A && git commit -m 'chore: savepoint'"
 
 # Stash
 git_global alias.stash-all "stash push --include-untracked"
@@ -5122,74 +5183,6 @@ git_global alias.standup "!git log --oneline --since='yesterday' --author=\"\$(g
 
 # Branch management
 git_global alias.recent "branch --sort=-committerdate --format='%(committerdate:relative)%09%(refname:short)' -n 15"
-# `cleanup` deletes local branches that are finished with. "Finished" has TWO
-# shapes here, and each selector is blind to the other's population (#321, #470):
-#
-#   * Upstream `[gone]` — what a squash merge plus `--delete-branch` leaves
-#     behind. This is the common case in this workflow.
-#   * Merged by ancestry — a branch that never had an upstream at all, so it can
-#     never be `[gone]`. Anything created locally and never pushed, or pushed
-#     without `-u`. #470 found one of these sitting fully merged and permanently
-#     invisible to the alias.
-#
-# Ancestry ALONE was the pre-#321 bug and must not come back as the only test:
-# `git branch --merged main` is an ancestry test, and a squash merge writes a NEW
-# commit that the branch tip is not an ancestor of. Every squash-merged branch is
-# invisible to it, so `cleanup` selected nothing, forever, then died on `xargs`
-# with `fatal: branch name required`, which reads as a usage error rather than
-# "nothing to do". The fix is the UNION of both selectors, not a swap.
-#
-# Deleting with `-d` is equally not an option: it applies that same ancestry test
-# and refuses a squash-merged branch, so selection would be right and the delete
-# would fail at the last step. `-D` gives up git's safety net, and the echoed SHA
-# is what replaces it: recovery is `git branch <name> <sha>`, with the reflog
-# behind that. Silence is the bug here, not politeness — an alias that finds
-# nothing says so.
-#
-# The default branch is read from origin/HEAD rather than hardcoded, and is
-# excluded from its own merged list (every branch is merged into itself). The
-# `--merged` call is guarded so a repo without that branch reports nothing
-# instead of erroring.
-#
-# Single-quoted so the body reaches git verbatim; keep single quotes OUT of it.
-# `for-each-ref` rather than `branch -vv | awk` so that no `$1` has to survive
-# three levels of quoting.
-git_global alias.cleanup '!f() {
-    git fetch --prune --quiet
-    current=$(git branch --show-current)
-    default=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed "s|^origin/||")
-    [ -z "$default" ] && default=main
-    git show-ref --verify --quiet "refs/heads/$default" || default=master
-    stale=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads | grep "\[gone\]$" | cut -d" " -f1)
-    merged=""
-    if git show-ref --verify --quiet "refs/heads/$default"; then
-        merged=$(git branch --merged "$default" --format="%(refname:short)" | grep -vx "$default")
-    fi
-    targets=$(printf "%s\n%s\n" "$stale" "$merged" | grep -v "^$" | sort -u)
-    if [ -z "$targets" ]; then
-        echo "Nothing to delete - no branch has a gone upstream or is merged into $default."
-        return 0
-    fi
-    echo "CAUTION: git cleanup permanently deletes the listed local branches."
-    echo "Each deleted branch includes its SHA for recovery."
-    echo "$targets" | while read -r b; do
-        if [ "$b" = "$current" ]; then
-            echo "skipped  $b - checked out, switch away first"
-            continue
-        fi
-        sha=$(git rev-parse --short "$b")
-        if git branch -D "$b" >/dev/null 2>&1; then
-            echo "deleted  $b ($sha) - restore with: git branch $b $sha"
-        else
-            echo "FAILED   $b ($sha)" >&2
-        fi
-    done
-}; f'
-
-# gone delegates. The implementation moved here from `gone` in #470: once the
-# behaviour is "gone OR merged", `cleanup` is the honest name for it. `gone` stays
-# as a second name for the same one implementation, per #321.
-git_global alias.gone "!git cleanup"
 
 # Diff
 git_global alias.dft "!git -c diff.external=difft diff"
@@ -5202,7 +5195,7 @@ git_global alias.wt "worktree"
 git_global alias.wta "worktree add"
 git_global alias.wtl "worktree list"
 
-configured "  git aliases configured (30+ shortcuts for status, log, branch, diff, worktree)"
+configured "  git aliases configured (status, log, branch, diff, worktree)"
 
 # ---- GPG + pinentry-mac ----
 GPG_AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
@@ -8573,15 +8566,12 @@ AWS_CONFIG="$HOME/.aws/config"
 # Docs: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html
 
 [default]
-region = us-east-1
 output = json
 cli_pager = bat --style=plain
-cli_auto_prompt = on-partial
 
 # Retry configuration
 retry_mode = adaptive
 max_attempts = 3
-
 # SSO profile template — duplicate and fill in for each account:
 # [profile my-dev]
 # sso_start_url = https://myorg.awsapps.com/start
@@ -8592,7 +8582,7 @@ max_attempts = 3
 # output = json
 AWS_CONF
     chmod 600 "$AWS_CONFIG"
-    configured "AWS CLI configured (us-east-1, json, bat pager, auto-prompt)"
+    configured "AWS CLI configured (JSON output, bat pager, adaptive retries)"
 
 # ---- GitHub CLI config ----
 GH_CONFIG_DIR="$HOME/.config/gh"
