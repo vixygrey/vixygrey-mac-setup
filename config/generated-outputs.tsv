@@ -103,7 +103,7 @@ omp-dir-agents-md|$OMP_DIR/AGENTS.md|generated|markdown|configs|none|none
 llama-cpp-launch-agent|$LLAMA_PLIST|generated|plist|services|plutil|none
 bat-config|$BAT_CONFIG_DIR/config|merged|text|configs|none|bat
 git-global-config|$HOME/.gitconfig|merged|gitconfig|configs|git|git
-global-ignore|$GLOBAL_IGNORE|managed|text|configs|none|none
+retired-global-ignore|$HOME/.ignore|superseded|text|configs|none|none
 agents-skill-api-testing|$AGENTS_SKILLS/api-testing/SKILL.md|generated|markdown|configs|none|none
 agents-skill-d2-diagrams|$AGENTS_SKILLS/d2-diagrams/SKILL.md|generated|markdown|configs|none|none
 agents-skill-inspect-machine|$AGENTS_SKILLS/inspect-machine/SKILL.md|generated|markdown|configs|none|none

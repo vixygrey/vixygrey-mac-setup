@@ -10533,20 +10533,9 @@ if should_run "configs"; then
 # =============================================================================
 banner "Oh My Pi Configuration"
 
-# ---- Global ~/.ignore shared by ripgrep and compatible tools ----
-GLOBAL_IGNORE="$HOME/.ignore"
-info "Creating global .ignore..."
-write_managed "$GLOBAL_IGNORE" "#" <<'GLOBAL_IGNORE_CONF'
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
-*.min.js
-*.min.css
-*.bundle.js
-*.bundle.css
-*.map
-GLOBAL_IGNORE_CONF
-configured "Global .ignore created (lock files and minified bundles hidden)"
+# Retire the former global search policy. The helper deletes only a complete
+# generator-owned block, so user-owned or modified ignore files remain intact.
+remove_superseded_managed "$HOME/.ignore" "This setup no longer writes global search policy." "#656"
 
 # ---- Agent preferences (omp) ----
 # Written to ~/.omp/agent/AGENTS.md. The function keeps the generated passage
