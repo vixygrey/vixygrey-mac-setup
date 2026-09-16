@@ -154,7 +154,7 @@ and prefer tagged release artifacts with the published SHA256 checksum.
 | **Go** | Go programming language |
 | **Python 3.12** | Python runtime (installed via mise) |
 | **uv** | Fast Python package manager -- 10-100x faster than pip |
-| **PyYAML** (`yaml-py`) | Isolated helper Python with the `yaml` module preinstalled for local YAML scripts and one-liners |
+| **PyYAML** (`yaml-py`) | Isolated helper with the managed Python runtime and the `yaml` module for local YAML scripts and one-liners |
 | **Rust** | Rust toolchain via rustup (rustc, cargo, etc.) |
 | **pnpm** | Fast, disk-efficient npm alternative |
 | **jq** | Lightweight command-line JSON processor |
