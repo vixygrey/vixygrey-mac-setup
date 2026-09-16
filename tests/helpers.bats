@@ -31,6 +31,19 @@ run_with_helpers() {
         source "$SETUP_SCRIPT"
         '"$1"
 }
+
+@test "remove_git_global_if_equal: removes only exact generator settings" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        git config --global pull.rebase true
+        remove_git_global_if_equal pull.rebase true
+        ! git config --global --get pull.rebase
+        git config --global pull.rebase merges
+        ! remove_git_global_if_equal pull.rebase true
+        [ "$(git config --global --get pull.rebase)" = merges ]
+    '
+    [ "$status" -eq 0 ]
+}
 @test "brew_update_if_due: skips recent metadata" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"

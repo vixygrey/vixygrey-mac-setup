@@ -174,7 +174,6 @@ jobs:
           OMP_THEME_CONF|jq empty /tmp/generated
           OMP_PROTECTED_PATHS_EXT|cp /tmp/generated /tmp/generated.ts && bun build /tmp/generated.ts --no-bundle --outdir /tmp/bunout
           LNAV_THEME_CONF|jq empty /tmp/generated
-          PRETTIER_CONF|jq empty /tmp/generated
           MICRO_CONF|jq empty /tmp/generated
           KIRO_EXTENSION_CONF|jq empty /tmp/generated
           KIRO_THEME_CONF|jq empty /tmp/generated
