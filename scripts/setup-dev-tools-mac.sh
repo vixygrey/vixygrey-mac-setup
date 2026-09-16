@@ -7925,17 +7925,15 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-# Default editor
-export EDITOR="micro"
-export VISUAL="micro"
-
-# Default pager
-export PAGER="bat --style=plain --paging=always"
-export MANPAGER="sh -c 'col -bx | bat -l man -p'"
-
-# Less config (used by git, man, etc. when bat isn't available)
-export LESS="-R -F -X -i -J -M -W -x4"
-export LESSHISTFILE="$HOME/.local/share/lesshst"
+# Interactive human-shell preferences
+if [[ -o interactive && -z "$AI_AGENT" ]]; then
+    export EDITOR="micro"
+    export VISUAL="micro"
+    export PAGER="bat --style=plain --paging=always"
+    export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+    export LESS="-R -F -X -i -J -M -W -x4"
+    export LESSHISTFILE="$HOME/.local/share/lesshst"
+fi
 
 # Language
 export LANG="en_US.UTF-8"
@@ -7973,8 +7971,11 @@ if [[ -d "$HOME/.dotnet/tools" ]]; then
     export PATH="$HOME/.dotnet/tools:$PATH"
 fi
 
-# Increase max open files (Node.js/webpack/vite need many file handles)
-ulimit -n 65536 2>/dev/null || true
+# Increase max open files for interactive developer tools.
+if [[ -o interactive && -z "$AI_AGENT" ]]; then
+    ulimit -n 65536 2>/dev/null || true
+fi
+
 
 # pnpm
 export PNPM_HOME="$HOME/Library/pnpm"
@@ -7992,8 +7993,10 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/Scripts/bin:$PATH"
 
 
-# GPG tty (required for commit signing)
-export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
+# GPG terminal for commit signing.
+if [[ -t 0 ]]; then
+    export GPG_TTY="$(tty)"
+fi
 
 # GNU coreutils (Linux-compatible versions) — deterministic prefix, no fork per pkg
 : "${HOMEBREW_PREFIX:=/opt/homebrew}"
@@ -8013,7 +8016,7 @@ unset _pkg _gnubin
 typeset -U PATH path
 
 ZPROFILE_CONF
-    configured "$HOME/.zprofile created (editor, pager, XDG, Go, Rust, pnpm, mise, direnv)"
+    configured "$HOME/.zprofile created (runtime paths and interactive editor, pager, and direnv preferences)"
 
 # ---- ~/.zshenv (every zsh invocation — interactive or not) ----
 ZSHENV="$HOME/.zshenv"
@@ -11953,8 +11956,10 @@ export PATH="$HOME/Scripts/bin:$PATH"
 # OMP local provider. Port 8080 belongs to the managed SearXNG instance.
 export LLAMA_CPP_BASE_URL="http://127.0.0.1:8081"
 
-# GPG tty (required for commit signing to work)
-export GPG_TTY=$(tty)
+# GPG terminal for commit signing.
+if [[ -t 0 ]]; then
+    export GPG_TTY="$(tty)"
+fi
 
 # Shared per-shell cache dir (delete ~/.cache/dev-setup to regenerate after updates)
 _cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/dev-setup"; mkdir -p "$_cachedir" 2>/dev/null
@@ -11976,8 +11981,10 @@ unset _pkg _gnubin
 # mise is activated in ~/.zshenv so EVERY shell type gets it, and again at the bottom of
 # this file so it also wins on PATH. See the block above the welcome screen for why.
 
-# direnv
-command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+# direnv can load project configuration. Keep it out of agent and non-interactive shells.
+if [[ -o interactive && -z "$AI_AGENT" ]]; then
+    command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+fi
 
 
 # starship prompt
