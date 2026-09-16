@@ -23,6 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed destructive global Git aliases and implicit AWS default region and prompt policy (#647, #653).
 - Scoped editor, pager, file-descriptor, GPG, and direnv policy to human interactive shells (#648, #651).
 - Retired generator-owned global Vim, Nano, RubyGems, and fd configuration without deleting user-owned files (#649, #654, #655).
+- Retired the generator-owned global ignore file without deleting user-owned ignore policy (#656).
 
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.3.0...HEAD
