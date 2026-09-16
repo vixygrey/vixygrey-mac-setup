@@ -333,6 +333,38 @@ OUR
     [ "$status" -eq 0 ]
 }
 
+@test "retire_global_tool_configs: removes only generator-owned preferences (#649, #654, #655)" {
+    run run_with_helpers '
+        for file in .vimrc .nanorc .gemrc .fdignore; do
+            cat > "$HOME/$file" <<CONFIG
+# >>> dev-setup managed block (do not edit between the markers) >>>
+managed preference
+# <<< dev-setup managed block <<<
+CONFIG
+        done
+
+        retire_global_tool_configs
+
+        for file in .vimrc .nanorc .gemrc .fdignore; do
+            [ ! -e "$HOME/$file" ]
+        done
+
+        printf "gem: --verbose\n" > "$HOME/.gemrc"
+        cat > "$HOME/.fdignore" <<CONFIG
+# >>> dev-setup managed block (do not edit between the markers) >>>
+managed preference
+# <<< dev-setup managed block <<<
+project-specific-ignore/
+CONFIG
+
+        retire_global_tool_configs
+
+        [ "$(cat "$HOME/.gemrc")" = "gem: --verbose" ]
+        grep -q "project-specific-ignore/" "$HOME/.fdignore"
+    '
+    [ "$status" -eq 0 ]
+}
+
 @test "remove_managed_script: removes a generated hook with its shebang (#636)" {
     run run_with_helpers '
         cat > "$HOME/hook" <<HOOK
