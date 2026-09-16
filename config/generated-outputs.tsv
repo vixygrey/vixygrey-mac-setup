@@ -37,14 +37,14 @@ prettierrc|$HOME/.prettierrc|superseded|text|configs|none|none
 curlrc|$HOME/.curlrc|superseded|text|configs|none|none
 zprofile|$ZPROFILE|managed|text|configs|none|none
 zshenv|$ZSHENV|managed|shell|configs|bash|none
-vimrc|$VIMRC|managed|text|configs|none|none
-nanorc|$NANORC|managed|text|configs|none|none
+vimrc|$HOME/.vimrc|superseded|text|configs|none|none
+nanorc|$HOME/.nanorc|superseded|text|configs|none|none
 mise-config|$MISE_CONFIG|managed|text|configs|none|mise
 topgrade-config|$TOPGRADE_CONFIG|managed|text|configs|none|topgrade
 fastfetch-config|$FASTFETCH_CONFIG|managed|text|configs|none|fastfetch
 jqp-config|$JQP_CONFIG|managed|text|configs|none|none
 ripgreprc|$HOME/.ripgreprc|superseded|text|configs|none|none
-fdignore|$FDIGNORE|managed|text|configs|none|none
+fdignore|$HOME/.fdignore|superseded|text|configs|none|none
 btop-config|$BTOP_CONFIG|managed|text|configs|none|none
 btop-theme|$BTOP_THEME|managed|text|configs|none|none
 btop-old-theme|$BTOP_OLD_THEME|superseded|text|configs|none|none
@@ -53,7 +53,7 @@ git-commit-template|$HOME/.gitmessage|superseded|text|configs|none|none
 aws-config|$AWS_CONFIG|managed|text|configs|none|none
 gh-config|$GH_CONFIG|managed|text|configs|none|gh
 pip-config|$PIP_CONFIG|managed|text|configs|none|pip
-gemrc|$GEMRC|managed|text|configs|none|gem
+gemrc|$HOME/.gemrc|superseded|text|configs|none|none
 harlequin-config|$HARLEQUIN_CONFIG|managed|text|configs|none|harlequin
 harlequin-superseded|$HARLEQUIN_SUPERSEDED|superseded|text|configs|none|none
 justfile-global|$JUSTFILE_GLOBAL|managed|text|configs|none|none

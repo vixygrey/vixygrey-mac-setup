@@ -482,11 +482,11 @@ declare -A CATEGORY_DESC=(
 # no control flow keys off it — but a typo'd category name would make a notice
 # silently never appear, so the keys are validated against ALL_CATEGORIES below.
 declare -A CONFIG_LIVES_IN_CONFIGS=(
-    [core]="mise, direnv, pip, gemrc"
+    [core]="mise, direnv, pip"
     [git]="lazygit, gh, global gitignore"
     [aws]="the AWS CLI config (\$HOME/.aws/config), Claws"
     [code-quality]="shellcheck, act, prettier, editorconfig"
-    [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
+    [replacements]="btop, ripgreprc, aria2, Yazi"
     [data-processing]="jqp"
     [api]="Posting"
     [terminal-productivity]="Emeraldian, leaf, topgrade, fastfetch, eilmeldung, cfait"
@@ -1318,6 +1318,20 @@ remove_superseded_managed() {
         info "Removed the superseded $file — $what $ref"
     fi
     rm -f "$outside"
+}
+
+# retire_global_tool_configs
+# Removes generator-owned global tool preferences that no longer belong in a
+# machine-wide setup. User files remain untouched.
+retire_global_tool_configs() {
+    remove_superseded_managed "$HOME/.vimrc" \
+        "Vim preferences are no longer managed globally" "(#649)"
+    remove_superseded_managed "$HOME/.nanorc" \
+        "Nano preferences are no longer managed globally" "(#649)"
+    remove_superseded_managed "$HOME/.gemrc" \
+        "RubyGems is not managed by this setup" "(#654)"
+    remove_superseded_managed "$HOME/.fdignore" \
+        "fd ignore rules are repository-owned" "(#655)"
 }
 
 # write_managed <file> [comment-prefix]   (config content on stdin)
@@ -2260,8 +2274,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo ""
     echo "# Remove the mise shim links that make node/npm/npx visible to git hooks:"
     echo "  rm -f ~/.local/bin/node ~/.local/bin/npm ~/.local/bin/npx"
-    echo "  rm -f ~/.fdignore ~/.nanorc ~/.vimrc"
-    echo "  rm -f ~/.hushlogin ~/.gemrc ~/.actrc ~/.tflint.hcl"
+    echo "  rm -f ~/.hushlogin ~/.actrc ~/.tflint.hcl"
     echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/ngrok"
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
@@ -3175,7 +3188,6 @@ if [[ "$VERIFY" == "true" ]]; then
         "path|git|$HOME/.gitconfig|_verify_git_config"
         "path|ssh|$HOME/.ssh/config|_verify_ssh_config"
         "path|pip|$HOME/.config/pip/pip.conf|_verify_pip_config"
-        "path|gem|$HOME/.gemrc|_verify_gem_config"
         # Was wrong twice and could never pass (#505): it named `direnvrc`, which
         # this script does not write, and its extractor looked for a `DirenvRC:`
         # field that `direnv status` does not emit. A `validate` row is also the
@@ -3218,14 +3230,6 @@ if [[ "$VERIFY" == "true" ]]; then
         elif [[ -f "$HOME/.ssh/config" ]]; then
             echo "$HOME/.ssh/config"
         fi
-    }
-    # RubyGems does not surface the gemrc path from `gem env` at all on stock macOS
-    # (it only lists INSTALLATION DIRECTORY, USER INSTALLATION DIRECTORY, and SYSTEM
-    # CONFIGURATION DIRECTORY — none of which is the user's gemrc). The cheapest
-    # probe is the file itself; if it is missing the row already fails earlier on
-    # the `[[ -e "$path" ]]` check.
-    _verify_gem_config() {
-        [[ -f "$HOME/.gemrc" ]] && echo "$HOME/.gemrc"
     }
     _verify_harlequin_config() {
         local out
@@ -8027,160 +8031,10 @@ ZSHENV="$HOME/.zshenv"
 ZSHENV_CONF
     configured "$HOME/.zshenv created (mise activation for all shell types)"
 
-# ---- ~/.vimrc (basic vim config for server editing) ----
-VIMRC="$HOME/.vimrc"
-    info "Creating basic ~/.vimrc..."
-    write_managed "$VIMRC" "#" <<'VIM_CONF'
-" =============================================================================
-" ~/.vimrc — minimal but comfortable vim config for server editing
-" =============================================================================
+# Retire global tool configuration. The helper removes only provably generator-owned files.
+retire_global_tool_configs
 
-" -- Basics -------------------------------------------------------------------
-set nocompatible          " Use vim, not vi
-syntax on                 " Syntax highlighting
-filetype plugin indent on " Filetype detection + plugins + indent
 
-" -- Display ------------------------------------------------------------------
-set number                " Line numbers
-set relativenumber        " Relative line numbers
-set ruler                 " Show cursor position
-set showcmd               " Show partial command
-set showmode              " Show current mode
-set cursorline            " Highlight current line
-set scrolloff=8           " Keep 8 lines above/below cursor
-set sidescrolloff=8       " Keep 8 columns left/right of cursor
-set signcolumn=yes        " Always show sign column
-set colorcolumn=100       " Line length guide at 100
-set laststatus=2          " Always show status line
-set wildmenu              " Better command completion
-set wildmode=longest:full,full
-
-" -- Indentation --------------------------------------------------------------
-set tabstop=2             " Tab = 2 spaces
-set shiftwidth=2          " Indent = 2 spaces
-set softtabstop=2         " Backspace deletes 2 spaces
-set expandtab             " Tabs -> spaces
-set autoindent            " Copy indent from current line
-set smartindent           " Smart auto-indent
-
-" -- Search -------------------------------------------------------------------
-set incsearch             " Incremental search
-set hlsearch              " Highlight matches
-set ignorecase            " Case-insensitive search
-set smartcase             " ...unless uppercase is used
-
-" -- Editing ------------------------------------------------------------------
-set backspace=indent,eol,start  " Backspace works everywhere
-set clipboard=unnamed     " Use system clipboard
-set mouse=a               " Enable mouse
-set hidden                " Allow hidden buffers
-set autoread              " Auto-reload changed files
-set encoding=utf-8        " UTF-8 encoding
-set noerrorbells          " No error bells
-set novisualbell          " No visual bells
-
-" -- Files --------------------------------------------------------------------
-set nobackup              " No backup files
-set nowritebackup         " No backup before overwriting
-set noswapfile            " No swap files
-set undofile              " Persistent undo
-set undodir=~/.vim/undodir
-
-" -- Keybindings --------------------------------------------------------------
-" Leader key = Space
-let mapleader = " "
-
-" Quick save
-nnoremap <leader>w :w<CR>
-
-" Quick quit
-nnoremap <leader>q :q<CR>
-
-" Clear search highlights
-nnoremap <leader>h :nohlsearch<CR>
-
-" Move between splits
-nnoremap <C-h> <C-w>h
-nnoremap <C-j> <C-w>j
-nnoremap <C-k> <C-w>k
-nnoremap <C-l> <C-w>l
-
-" Move lines up/down in visual mode
-vnoremap J :m '>+1<CR>gv=gv
-vnoremap K :m '<-2<CR>gv=gv
-
-" Keep cursor centered when scrolling
-nnoremap <C-d> <C-d>zz
-nnoremap <C-u> <C-u>zz
-
-" -- Dracula-ish Colors (no plugin needed) ------------------------------------
-set termguicolors
-set background=dark
-highlight Normal       guifg=#f8f8f2 guibg=#282a36
-highlight CursorLine   guibg=#44475a
-highlight LineNr       guifg=#6272a4
-highlight CursorLineNr guifg=#f8f8f2
-highlight Comment      guifg=#6272a4
-highlight Visual       guibg=#44475a
-highlight Search       guifg=#282a36 guibg=#f1fa8c
-highlight StatusLine   guifg=#f8f8f2 guibg=#44475a
-highlight ColorColumn  guibg=#44475a
-
-" Create undo directory if it doesn't exist
-if !isdirectory($HOME . "/.vim/undodir")
-    call mkdir($HOME . "/.vim/undodir", "p")
-endif
-VIM_CONF
-    configured "$HOME/.vimrc created (line numbers, clipboard, mouse, Dracula colors, space leader)"
-
-# ---- ~/.nanorc (better nano for quick edits) ----
-NANORC="$HOME/.nanorc"
-    info "Creating ~/.nanorc..."
-    write_managed "$NANORC" "#" <<'NANO_CONF'
-# =============================================================================
-# ~/.nanorc — comfortable nano config for quick edits
-# =============================================================================
-
-# Display line numbers
-set linenumbers
-
-# Show cursor position in status bar
-set constantshow
-
-# Smooth scrolling
-set smooth
-
-# Auto-indent new lines
-set autoindent
-
-# Tab size = 2, convert to spaces
-set tabsize 2
-set tabstospaces
-
-# Enable mouse
-set mouse
-
-# Don't wrap long lines
-set nowrap
-
-# Show matching bracket
-set matchbrackets "(<[{)>]}"
-
-# Smart home key (jump to first non-whitespace)
-set smarthome
-
-# Soft wrapping (display only, doesn't modify file)
-set softwrap
-
-# Suspend with Ctrl+Z
-set suspend
-
-# Enable syntax highlighting (all installed syntaxes)
-include "PLACEHOLDER_BREW_PREFIX/share/nano/*.nanorc"
-NANO_CONF
-    # Replace placeholder with actual brew prefix
-    /usr/bin/sed -i '' "s|PLACEHOLDER_BREW_PREFIX|$(brew --prefix)|g" "$NANORC"
-    configured "$HOME/.nanorc created (line numbers, auto-indent, mouse, syntax highlighting)"
 
 # ---- bat extended config (file type mappings) ----
 if ! is_done "config:bat-mappings"; then
@@ -8387,28 +8241,6 @@ remove_superseded_managed "$HOME/.config/aichat/config.yaml" \
 remove_superseded_managed "$HOME/.ripgreprc" \
     "ripgrep search policy is now invocation-owned" "(#644)"
 
-# ---- fd ignore ----
-FDIGNORE="$HOME/.fdignore"
-    info "Creating fd ignore patterns..."
-    write_managed "$FDIGNORE" "#" <<'FD_CONF'
-# fd global ignore patterns
-.git/
-node_modules/
-.pnpm-store/
-vendor/
-dist/
-build/
-coverage/
-.next/
-out/
-__pycache__/
-.venv/
-*.min.js
-*.min.css
-.DS_Store
-.Trash/
-FD_CONF
-    configured "$HOME/.fdignore created"
 
 # ---- btop Dracula-Sakura theme ----
 BTOP_CONFIG_DIR="$HOME/.config/btop"
@@ -8647,14 +8479,6 @@ compile = true
 PIP_CONF
     configured "pip configured (require virtualenv, no telemetry)"
 
-# ---- gemrc (Ruby) ----
-GEMRC="$HOME/.gemrc"
-    info "Creating gemrc..."
-    write_managed "$GEMRC" "#" <<'GEM_CONF'
-# Skip documentation when installing gems (saves time and disk)
-gem: --no-document
-GEM_CONF
-    configured "$HOME/.gemrc created (no docs on gem install)"
 
 # Retired database client configs are removed only when their managed blocks
 # prove ownership. History files and other user data remain untouched.
