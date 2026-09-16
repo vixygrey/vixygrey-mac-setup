@@ -1029,6 +1029,15 @@ services_requested() {
 
 # -- Utility functions --------------------------------------------------------
 installed() { command -v "$1" &>/dev/null; }
+
+# cleanup_manual_review <path> <reason>
+# Report a user data path that cleanup cannot prove the generator owns.
+cleanup_manual_review() {
+    local path="$1" reason="$2" pretty
+    [[ -e "$path" ]] || return 1
+    pretty="${path/#$HOME/\~}"
+    info "Keeping $pretty — this setup did not write this data. Review and remove it manually if $reason."
+}
 # Run a command with administrator privileges without allowing an unexpected
 # password prompt when --no-prompt is active.
 sudo_run() {
@@ -2387,8 +2396,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "npm:playwright:Playwright:removed"
         "npm:storybook:Storybook CLI:removed"
         "npm:repomix:repomix (npm copy):omp"
-        # Retired in #513: omp replaced pi. ~/.pi goes with it through
-        # CONFIG_ORPHANS below.
+        # Retired in #513: omp replaced pi. Its unowned data needs manual review.
         "npm:@earendil-works/pi-coding-agent:pi (superseded by omp):omp"
         # Retired in #540. Personal notes under ~/Documents/notes stay untouched.
         "brew:boolean-maybe/tap/tiki:tiki:plain Markdown + reminders"
@@ -2397,8 +2405,8 @@ if [[ "$CLEANUP" == "true" ]]; then
         # Retired in #544. The managed config and exact generated login agent are
         # removed in the configs segment, where normal reruns also reach them.
         "cask:ghostty:Ghostty:Kitty:Ghostty"
-        # Retired in #546. Yazi replaces both file managers. starlit has no
-        # replacement. Exclusive config is handled through CONFIG_ORPHANS.
+        # Retired in #546. Yazi replaces both file managers. Their unowned config
+        # needs manual review.
         "uv:rovr:rovr:Yazi"
         "formula:nnn:nnn:Yazi"
         "uv:starlit-cli:starlit:removed"
@@ -2786,11 +2794,10 @@ if [[ "$CLEANUP" == "true" ]]; then
         fi
     fi
 
-    # -- Orphaned application support trees ----------------------------------
-    # Homebrew removes an app bundle but does not remove its per-user data.
-    # Remove only paths for retired apps after the matching app bundle is absent.
-    # Prefer Trash so each removal stays recoverable.
-    ORPHANED_EDITOR_DIRS=(
+    # -- Application support data requiring manual review ----------------------
+    # Application removal never proves ownership of the user data it leaves behind.
+    # Keep every unmarked tree and name it for manual review instead of moving it.
+    MANUAL_REVIEW_APP_DATA=(
         "Cursor|$HOME/.cursor"
         "Cursor|$HOME/Library/Application Support/Cursor"
         "Visual Studio Code|$HOME/.vscode"
@@ -2801,41 +2808,20 @@ if [[ "$CLEANUP" == "true" ]]; then
         "Skim|$HOME/Library/Application Support/Skim"
         "OrbStack|$HOME/.orbstack"
         "OrbStack|$HOME/Library/Application Support/OrbStack"
-        # CAUTION: This directory contains mail and account data. Cleanup moves it
-        # to Trash only after the Thunderbird application is absent (#578).
+        # CAUTION: This directory contains mail and account data.
+        # This setup never wrote it, so cleanup keeps it for manual review.
         "Thunderbird|$HOME/Library/Thunderbird"
     )
-    for entry in "${ORPHANED_EDITOR_DIRS[@]}"; do
-        _app="${entry%%|*}"
+    for entry in "${MANUAL_REVIEW_APP_DATA[@]}"; do
         _dir="${entry#*|}"
-        _pretty="${_dir/#$HOME/\~}"
         if [[ ! -d "$_dir" ]]; then
             ((CLEANUP_SKIPPED++))
             continue
         fi
-        if [[ -d "/Applications/${_app}.app" ]]; then
-            info "Keeping $_pretty — ${_app} is still installed"
-            ((CLEANUP_SKIPPED++))
-            continue
-        fi
-        if [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would remove orphaned $_pretty (${_app} is not installed)"
-        else
-            info "Removing orphaned $_pretty (${_app} is not installed)..."
-            if installed trash; then
-                if trash "$_dir" >> "$LOG_FILE" 2>&1; then
-                    ((CLEANUP_COUNT++)); success "$_pretty moved to Trash"
-                else
-                    error "Failed to remove $_pretty"
-                fi
-            elif rm -rf "$_dir"; then
-                ((CLEANUP_COUNT++)); success "$_pretty removed"
-            else
-                error "Failed to remove $_pretty"
-            fi
-        fi
+        cleanup_manual_review "$_dir" "it is no longer needed"
+        ((CLEANUP_SKIPPED++))
     done
-    unset _app _dir _pretty
+    unset _dir
 
     # office-py was a generator-owned link into a generator-owned virtual environment.
     # Remove only the exact link target, then remove the isolated environment.
@@ -2863,15 +2849,15 @@ if [[ "$CLEANUP" == "true" ]]; then
     fi
     unset _office_venv _office_link
 
-    # -- Orphaned config and data paths --------------------------------------
-    # Uninstalling a CLI removes its binary, not its per-user data. This sweep
-    # runs after package removal and requires the owning command to be absent.
-    #
+    # -- Configuration and data requiring manual review -----------------------
+    # A missing command does not prove that this setup owns its data. A user can
+    # install the tool through another manager or retain credentials and sessions.
+    # Preserve every unmarked path and report it for manual review.
     # ~/.docker is deliberately absent. Docker clients and container runtimes
     # share its contexts and registry credentials. Removing OrbStack does not
     # prove ownership of that shared directory.
     hash -r 2>/dev/null || true
-    CONFIG_ORPHANS=(
+    MANUAL_REVIEW_CONFIG_PATHS=(
         "aerc|$HOME/.config/aerc|removed"
         "khal|$HOME/.config/khal|removed"
         "vdirsyncer|$HOME/.config/vdirsyncer|removed"
@@ -2886,11 +2872,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "aerospace|$HOME/.aerospace.toml|native Spaces + tiling"
         "nvm|$HOME/.nvm|mise"
         "pyenv|$HOME/.pyenv|mise"
-        # CAUTION: ~/.pi holds content this generator never wrote — hand-placed
-        # extensions, auth.json and session history. Removal is deliberate (#513)
-        # and is guarded the way section 15 requires: this sweep only fires when
-        # `pi` is absent from PATH, and it moves the directory to the Trash rather
-        # than deleting it, so it stays recoverable from Finder until emptied.
+        # ~/.pi can contain hand-placed extensions, auth.json, and session history.
         "pi|$HOME/.pi|omp"
         "tiki|$HOME/.config/tiki|plain Markdown + reminders"
         "ollama|$HOME/.ollama|llama.cpp"
@@ -2915,9 +2897,7 @@ if [[ "$CLEANUP" == "true" ]]; then
         "newsboat|$HOME/.newsboat|removed"
         "gws|$HOME/.config/gws|removed"
         "gcloud|$HOME/.config/gcloud|removed"
-        # CAUTION: These paths can contain credentials and session history that
-        # the generator did not write. Removal is explicit under --cleanup and
-        # uses Trash after both Claude command providers are absent.
+        # Claude paths can contain credentials and session history.
         "claude|$HOME/.claude|removed"
         "claude|$HOME/.claude.json|removed"
         "sketchybar|$HOME/.config/sketchybar|removed"
@@ -2927,39 +2907,18 @@ if [[ "$CLEANUP" == "true" ]]; then
         "stern|$HOME/.config/stern|removed"
         "tflint|$HOME/.tflint.hcl|removed"
     )
-    for entry in "${CONFIG_ORPHANS[@]}"; do
+    for entry in "${MANUAL_REVIEW_CONFIG_PATHS[@]}"; do
         _tool="${entry%%|*}"
-        _rest="${entry#*|}"
-        _dir="${_rest%%|*}"
-        _repl="${_rest##*|}"
-        _pretty="${_dir/#$HOME/\~}"
+        _dir="${entry#*|}"
+        _dir="${_dir%%|*}"
         if [[ ! -e "$_dir" ]]; then
             ((CLEANUP_SKIPPED++))
             continue
         fi
-        if command -v "$_tool" &>/dev/null; then
-            info "Keeping $_pretty — $_tool is still installed"
-            ((CLEANUP_SKIPPED++))
-            continue
-        fi
-        if [[ "$DRY_RUN" == "true" ]]; then
-            info "[DRY RUN] Would remove orphaned config $_pretty ($_tool -> $_repl)"
-        else
-            info "Removing orphaned config $_pretty ($_tool -> $_repl)..."
-            if installed trash; then
-                if trash "$_dir" >> "$LOG_FILE" 2>&1; then
-                    ((CLEANUP_COUNT++)); success "$_pretty moved to Trash"
-                else
-                    error "Failed to remove $_pretty"
-                fi
-            elif rm -rf "$_dir"; then
-                ((CLEANUP_COUNT++)); success "$_pretty removed"
-            else
-                error "Failed to remove $_pretty"
-            fi
-        fi
+        cleanup_manual_review "$_dir" "$_tool is no longer needed"
+        ((CLEANUP_SKIPPED++))
     done
-    unset _tool _rest _dir _repl _pretty
+    unset _tool _dir
 
     # SurgeDM stores its queue, token, logs, and settings together. The generator
     # did not write these files, so package retirement does not prove that the
@@ -2979,9 +2938,8 @@ if [[ "$CLEANUP" == "true" ]]; then
     # timing rather than safety: npm_global_install only ever writes to mise's
     # tree, so the two diverge at the first upgrade and PATH order decides which
     # one runs. That is #343, and the shape #513 found with pi under two managers.
-    #
-    # Not a CONFIG_ORPHANS row: that list is per-tool config directories keyed on
-    # a binary name, and this is one prefix-wide sweep with a different guard.
+    # Not a manual-review path: that list holds user-owned config and data, while
+    # this is one Homebrew prefix-wide sweep with an exact ownership guard.
     #
     # The guard is that the prefix has NO node. lib/node_modules is npm's global
     # root for that prefix's node, so while the formula is installed the tree is

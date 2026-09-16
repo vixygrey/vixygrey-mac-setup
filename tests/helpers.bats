@@ -1337,3 +1337,27 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = $'DEFAULT_DISABLED\nFLAG_ENABLED\nCATEGORY_ENABLED' ]
 }
+
+@test "cleanup_manual_review preserves unowned agent and mail data (#657)" {
+    run run_with_helpers '
+        info() { printf "%s\n" "$1"; }
+        mkdir -p "$HOME/.pi" "$HOME/.claude" "$HOME/Library/Thunderbird"
+        printf "%s\n" "session" > "$HOME/.pi/session.json"
+        printf "%s\n" "credential" > "$HOME/.claude/credentials.json"
+        printf "%s\n" "settings" > "$HOME/.claude.json"
+        printf "%s\n" "mail" > "$HOME/Library/Thunderbird/profiles.ini"
+        cleanup_manual_review "$HOME/.pi" "pi is no longer needed"
+        cleanup_manual_review "$HOME/.claude" "Claude is no longer needed"
+        cleanup_manual_review "$HOME/.claude.json" "Claude is no longer needed"
+        cleanup_manual_review "$HOME/Library/Thunderbird" "Thunderbird is no longer needed"
+        test -f "$HOME/.pi/session.json"
+        test -f "$HOME/.claude/credentials.json"
+        test -f "$HOME/.claude.json"
+        test -f "$HOME/Library/Thunderbird/profiles.ini"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Keeping ~/.pi — this setup did not write this data."* ]]
+    [[ "$output" == *"Keeping ~/.claude — this setup did not write this data."* ]]
+    [[ "$output" == *"Keeping ~/.claude.json — this setup did not write this data."* ]]
+    [[ "$output" == *"Keeping ~/Library/Thunderbird — this setup did not write this data."* ]]
+}
