@@ -482,8 +482,8 @@ declare -A CATEGORY_DESC=(
 # no control flow keys off it — but a typo'd category name would make a notice
 # silently never appear, so the keys are validated against ALL_CATEGORIES below.
 declare -A CONFIG_LIVES_IN_CONFIGS=(
-    [core]="mise, direnv, ~/.npmrc, pip, gemrc"
-    [git]="lazygit, gh, the commit template, global gitignore"
+    [core]="mise, direnv, pip, gemrc"
+    [git]="lazygit, gh, global gitignore"
     [aws]="the AWS CLI config (\$HOME/.aws/config), Claws"
     [code-quality]="shellcheck, act, prettier, editorconfig"
     [replacements]="btop, ripgreprc, fdignore, aria2, Yazi"
@@ -1117,6 +1117,21 @@ git_global() {
     fi
     git config --global "$@"
 }
+
+# remove_git_global_if_equal <key> <value>
+# Removes a legacy setting only when the global config has exactly the value this
+# generator used to write. User overrides and multi-valued settings stay intact.
+remove_git_global_if_equal() {
+    local key="$1" expected="$2" actual
+    actual="$(git config --global --get-all "$key" 2>/dev/null || true)"
+    [[ "$actual" == "$expected" ]] || return 1
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove global Git setting: $key"
+        return 0
+    fi
+    git_global --unset-all "$key"
+}
+
 
 # ensure_dir <dir...>
 # `mkdir -p` that honours --dry-run. Used at the sites a dry run actually reaches —
@@ -2184,12 +2199,12 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  brew bundle cleanup --file=~/.config/brewfile/Brewfile --force"
     echo ""
     echo "# Remove config files:"
-    echo "  rm -f ~/.shellcheckrc ~/.editorconfig ~/.prettierrc"
+    echo "  rm -f ~/.shellcheckrc"
     echo ""
     echo "# Remove the mise shim links that make node/npm/npx visible to git hooks:"
     echo "  rm -f ~/.local/bin/node ~/.local/bin/npm ~/.local/bin/npx"
-    echo "  rm -f ~/.curlrc ~/.npmrc ~/.ripgreprc ~/.fdignore ~/.nanorc ~/.vimrc"
-    echo "  rm -f ~/.hushlogin ~/.gitmessage ~/.gemrc ~/.actrc ~/.tflint.hcl"
+    echo "  rm -f ~/.fdignore ~/.nanorc ~/.vimrc"
+    echo "  rm -f ~/.hushlogin ~/.gemrc ~/.actrc ~/.tflint.hcl"
     echo "  rm -rf ~/.aria2 ~/.config/atuin ~/.config/ngrok"
     echo "  rm -rf ~/.config/yt-dlp ~/.config/gh-dash ~/.config/stern"
     echo "  rm -rf ~/.config/btop ~/.config/lazydocker ~/.config/mise"
@@ -2225,11 +2240,9 @@ if [[ "$UNINSTALL" == "true" ]]; then
     echo "  rm -rf ~/Scripts/bin"
     echo ""
     echo "# Remove the managed block from ~/.zshrc (edit manually)"
-    echo "# Remove git global config overrides:"
+    echo "# Remove Git global configuration:"
     echo "  git config --global --unset core.pager"
-    echo "  git config --global --unset core.hooksPath"
     echo "  git config --global --unset core.excludesfile"
-    echo "  git config --global --unset commit.template"
     echo ""
     echo "# Remove state files:"
     echo "  rm -rf ~/.local/share/dev-setup"
@@ -3104,7 +3117,6 @@ if [[ "$VERIFY" == "true" ]]; then
         # setup still writes Git settings there, but no longer manages global hooks.
         "path|git|$HOME/.gitconfig|_verify_git_config"
         "path|ssh|$HOME/.ssh/config|_verify_ssh_config"
-        "path|npm|$HOME/.npmrc|npm config get userconfig 2>/dev/null | tr -d '\n'; echo"
         "path|pip|$HOME/.config/pip/pip.conf|_verify_pip_config"
         "path|gem|$HOME/.gemrc|_verify_gem_config"
         # Was wrong twice and could never pass (#505): it named `direnvrc`, which
@@ -3115,12 +3127,6 @@ if [[ "$VERIFY" == "true" ]]; then
         # proves direnv loaded our file rather than merely looked in its folder.
         "validate|direnv|$HOME/.config/direnv/direnv.toml|_verify_output_has '^whitelist[.]prefix [[].+[]]' direnv status ."
         "path|gh|$HOME/.config/gh/config.yml|_verify_gh_config"
-        # ripgrep only reads its config when RIPGREP_CONFIG_PATH is exported — a self-
-        # contained trap. The export lives in the generated ~/.zshrc, so a row that
-        # fires under --verify would always look MISSING on a non-interactive shell.
-        # Leave the path row in place so it CAN run when the env is set, but the row
-        # is gated on the env var so it skips itself otherwise, instead of failing.
-        "path|ripgrep|$HOME/.config/ripgrep/config|[[ -n \"\${RIPGREP_CONFIG_PATH:-}\" ]] && echo \"\$RIPGREP_CONFIG_PATH\" || true"
     )
 
     # Helpers for path-mode rows above. Keep them near VERIFY_TARGETS so the row and
@@ -3607,7 +3613,6 @@ brew_install "pre-commit" "pre-commit (git hook framework)"
 if ! git config --global core.pager | grep -q delta 2>/dev/null; then
     info "Configuring delta as git pager..."
     git_global core.pager delta
-    git_global interactive.diffFilter "delta --color-only"
     git_global delta.navigate true
     git_global delta.side-by-side true
     git_global merge.conflictstyle diff3
@@ -4669,8 +4674,8 @@ else
         # Accept a complete verified partial file before curl. A server can close
         # the final transfer with a nonzero status after every byte reached disk.
         if _llama_model_valid "$LLAMA_CPP_MODEL.part" || {
-            # Override ~/.curlrc's 30-second request limit. This multi-gigabyte
-            # transfer keeps its resumable partial file, but one run must finish it.
+            # This multi-gigabyte transfer keeps its resumable partial file, so
+            # one run must not inherit a request time limit.
             curl --fail --location --continue-at - --max-time 0 \
                 --output "$LLAMA_CPP_MODEL.part" "$LLAMA_CPP_MODEL_URL" >> "$LOG_FILE" 2>&1 &&
                 _llama_model_valid "$LLAMA_CPP_MODEL.part"
@@ -5053,34 +5058,37 @@ banner "Configuration Layer"
 # ---- git global config ----
 info "Configuring git global settings..."
 
-# Default branch
+# Default branch for new repositories.
 git_global init.defaultBranch main 2>/dev/null
 
-# Pull strategy (rebase to keep history clean)
-git_global pull.rebase true
+# Retire repository workflow policy that older releases imposed globally. Remove
+# only the exact values this generator wrote, so user-owned overrides stay intact.
+_retired_git_settings=0
+for _git_setting in \
+    "pull.rebase|true" \
+    "rebase.autoStash|true" \
+    "rerere.enabled|true" \
+    "interactive.diffFilter|delta --color-only" \
+    "commit.template|$HOME/.gitmessage"; do
+    _git_key="${_git_setting%%|*}"
+    _git_value="${_git_setting#*|}"
+    if remove_git_global_if_equal "$_git_key" "$_git_value"; then
+        ((_retired_git_settings++)) || true
+    fi
+done
+unset _git_setting _git_key _git_value
+if (( _retired_git_settings > 0 )); then
+    configured "Removed generator-owned Git workflow defaults"
+fi
+unset _retired_git_settings
 
-# Auto-stash on rebase
-git_global rebase.autoStash true
-
-# Better diff algorithm
+# Display preferences. These affect only explicit Git output, not repository workflow.
 git_global diff.algorithm histogram
-
-# Show diff in commit message editor
 git_global commit.verbose true
-
-# Auto-correct typos (0.5s delay)
 git_global help.autocorrect 5
-
-# Column output for branch listing
 git_global column.ui auto
-
-# Sort branches by most recent commit
 git_global branch.sort -committerdate
-
-# Remember merge conflict resolutions and auto-apply next time
-git_global rerere.enabled true
-
-configured "  git core settings configured (rebase, histogram diff, rerere)"
+configured "Git defaults configured (main branch and display preferences)"
 
 # Useful aliases
 # Basic shortcuts
@@ -5162,6 +5170,8 @@ git_global alias.cleanup '!f() {
         echo "Nothing to delete - no branch has a gone upstream or is merged into $default."
         return 0
     fi
+    echo "CAUTION: git cleanup permanently deletes the listed local branches."
+    echo "Each deleted branch includes its SHA for recovery."
     echo "$targets" | while read -r b; do
         if [ "$b" = "$current" ]; then
             echo "skipped  $b - checked out, switch away first"
@@ -7520,23 +7530,14 @@ Host *
     ServerAliveInterval 60
     ServerAliveCountMax 3
 
-    # Use macOS Keychain for SSH keys
-    AddKeysToAgent yes
-    UseKeychain yes
-    IdentityFile ~/.ssh/id_ed25519
-
-    # Faster connections
-    Compression yes
-
-    # Security: only use strong algorithms
-    HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
-    PubkeyAcceptedAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
-
 # -- GitHub -------------------------------------------------------------------
 Host github.com
     HostName github.com
     User git
+    AddKeysToAgent yes
+    UseKeychain yes
     IdentityFile ~/.ssh/id_ed25519
+
 
 # -- Example: shortcut for a server ------------------------------------------
 # Host myserver
@@ -7551,7 +7552,7 @@ SSH_CONF
         chmod 700 "$HOME/.ssh" "$HOME/.ssh/sockets"
         chmod 600 "$SSH_CONFIG"
     fi
-    configured "SSH configured (multiplexing, keychain, keep-alive, strong algorithms)"
+    configured "SSH configured (multiplexing, GitHub keychain, keep-alive)"
 
 # Generate SSH key if none exists
 if [[ ! -f "$HOME/.ssh/id_ed25519" ]]; then
@@ -7566,7 +7567,7 @@ GLOBAL_GITIGNORE="$HOME/.gitignore_global"
     info "Creating global .gitignore..."
     write_managed "$GLOBAL_GITIGNORE" "#" <<'GITIGNORE_GLOBAL'
 # =============================================================================
-# Global .gitignore — applied to ALL repositories
+# Global .gitignore — macOS filesystem noise only
 # =============================================================================
 
 # -- macOS --------------------------------------------------------------------
@@ -7578,169 +7579,19 @@ GLOBAL_GITIGNORE="$HOME/.gitignore_global"
 .AppleDouble
 .LSOverride
 Icon?
-
-
-# -- Environment & Secrets ----------------------------------------------------
-.env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.pem
-*.key
-*.p12
-*.pfx
-credentials.json
-secrets.yaml
-secrets.yml
-
-# -- Node ---------------------------------------------------------------------
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# -- Python -------------------------------------------------------------------
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-.Python
-
-# -- Build artifacts ----------------------------------------------------------
-dist/
-build/
-*.o
-*.so
-*.dylib
-coverage/
-.nyc_output/
-
-# -- Thumbnails & system files ------------------------------------------------
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
 GITIGNORE_GLOBAL
     git_global core.excludesfile "$GLOBAL_GITIGNORE"
     configured "Global .gitignore created and registered with git"
 
-# ---- .npmrc ----
-NPMRC="$HOME/.npmrc"
-    info "Creating .npmrc..."
-    write_managed "$NPMRC" "#" <<'NPMRC_CONF'
-# Save exact versions (no ^ or ~ prefix)
-save-exact=true
-
-# Default init values
-init-author-name=
-init-license=MIT
-init-version=0.1.0
-
-# Disable npm telemetry / update notifications
-update-notifier=false
-fund=false
-audit-level=moderate
-
-# Prefer offline if cached
-prefer-offline=true
-
-# Engine strict (fail if node version doesn't match)
-engine-strict=true
-NPMRC_CONF
-    configured ".npmrc configured (save-exact, no telemetry, prefer-offline)"
-
-# ---- .editorconfig ----
-EDITORCONFIG="$HOME/.editorconfig"
-    info "Creating global .editorconfig..."
-    write_managed "$EDITORCONFIG" "#" <<'EDITORCONFIG_CONF'
-# EditorConfig — cross-editor consistency
-# https://editorconfig.org
-root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-indent_style = space
-indent_size = 2
-insert_final_newline = true
-trim_trailing_whitespace = true
-
-[*.md]
-trim_trailing_whitespace = false
-
-[*.py]
-indent_size = 4
-
-[*.go]
-indent_style = tab
-indent_size = 4
-
-[*.rs]
-indent_size = 4
-
-[Makefile]
-indent_style = tab
-
-[*.{yml,yaml}]
-indent_size = 2
-
-[*.{sh,bash,zsh}]
-indent_size = 4
-EDITORCONFIG_CONF
-    configured ".editorconfig created (utf-8, lf, 2-space indent, trim whitespace)"
-
-# ---- .prettierrc ----
-PRETTIERRC="$HOME/.prettierrc"
-    info "Creating global .prettierrc..."
-    write_managed "$PRETTIERRC" "#" <<'PRETTIER_CONF'
-{
-  "semi": true,
-  "singleQuote": true,
-  "trailingComma": "all",
-  "printWidth": 100,
-  "tabWidth": 2,
-  "useTabs": false,
-  "bracketSpacing": true,
-  "arrowParens": "always",
-  "endOfLine": "lf"
-}
-PRETTIER_CONF
-    configured ".prettierrc created (single quotes, trailing commas, 100 width)"
-
-# ---- .curlrc ----
-CURLRC="$HOME/.curlrc"
-    info "Creating .curlrc..."
-    write_managed "$CURLRC" "#" <<'CURLRC_CONF'
-# Follow redirects automatically
---location
-
-# Show error messages on failure
---show-error
-
-# Fail silently on HTTP errors (return non-zero exit code)
---fail
-
-# Set a reasonable timeout (30 seconds)
---max-time 30
-
-# Connection timeout (10 seconds)
---connect-timeout 10
-
-# Retry on transient errors
---retry 3
---retry-delay 2
-
-# Compressed responses
---compressed
-
-# User agent
---user-agent "curl/dev"
-CURLRC_CONF
-    configured ".curlrc configured (follow redirects, retry, compression, timeouts)"
+# Remove legacy global policy only when its managed block proves generator ownership.
+remove_superseded_managed "$HOME/.npmrc" \
+    "npm policy is now repository-owned" "(#644)"
+remove_superseded_managed "$HOME/.editorconfig" \
+    "editor policy is now repository-owned" "(#644)"
+remove_superseded_managed "$HOME/.prettierrc" \
+    "Prettier policy is now repository-owned" "(#644)"
+remove_superseded_managed "$HOME/.curlrc" \
+    "curl behavior now uses each invocation's explicit flags" "(#644)"
 
 # ---- eilmeldung ----
 # The reader supports a full RGB palette. Keep behavior close to upstream defaults,
@@ -8147,8 +7998,6 @@ export PATH="$HOME/.local/bin:$PATH"
 # Personal scripts
 export PATH="$HOME/Scripts/bin:$PATH"
 
-# ripgrep config
-export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 
 # GPG tty (required for commit signing)
 export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
@@ -8538,46 +8387,9 @@ JQP_CONF
 remove_superseded_managed "$HOME/.config/aichat/config.yaml" \
     "aichat was removed from the setup" "(#542)"
 
-# ---- ripgrep config ----
-RIPGREPRC="$HOME/.ripgreprc"
-    info "Creating ripgrep configuration..."
-    write_managed "$RIPGREPRC" "#" <<'RG_CONF'
-# Smart case (case-insensitive unless uppercase is used)
---smart-case
-
-# Search hidden files/directories
---hidden
-
-# Follow symlinks
---follow
-
-# Don't search these directories
---glob=!.git/
---glob=!node_modules/
---glob=!.pnpm-store/
---glob=!vendor/
---glob=!dist/
---glob=!build/
---glob=!coverage/
---glob=!.next/
---glob=!__pycache__/
---glob=!*.min.js
---glob=!*.min.css
---glob=!package-lock.json
---glob=!pnpm-lock.yaml
---glob=!yarn.lock
-
-# Max columns before truncation
---max-columns=200
---max-columns-preview
-
-# Add custom type definitions
---type-add=web:*.{html,css,scss,js,jsx,ts,tsx,vue,svelte}
---type-add=config:*.{json,yaml,yml,toml,ini,conf}
---type-add=doc:*.{md,mdx,txt,rst}
---type-add=style:*.{css,scss,sass,less}
-RG_CONF
-    configured "$HOME/.ripgreprc configured (smart-case, hidden files, custom types)"
+# Remove the global ripgrep policy so repository search commands use explicit flags.
+remove_superseded_managed "$HOME/.ripgreprc" \
+    "ripgrep search policy is now invocation-owned" "(#644)"
 
 # ---- fd ignore ----
 FDIGNORE="$HOME/.fdignore"
@@ -8716,24 +8528,9 @@ logs:
 LAZYDOCKER_CONF
     configured "lazydocker configured with Dracula-Sakura theme"
 
-# ---- Git commit template ----
-GIT_COMMIT_TEMPLATE="$HOME/.gitmessage"
-    info "Creating git commit template..."
-    write_managed "$GIT_COMMIT_TEMPLATE" "#" <<'GIT_TEMPLATE'
-# <type>(<scope>): <short summary>
-#
-# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
-#
-# Body (optional): explain WHAT and WHY, not HOW
-#
-
-# Breaking changes (optional):
-# BREAKING CHANGE: <description>
-#
-# Closes: #<issue>
-GIT_TEMPLATE
-    git_global commit.template "$GIT_COMMIT_TEMPLATE"
-    configured "Git commit template created and registered"
+# ---- Retire global Git commit template ----
+remove_superseded_managed "$HOME/.gitmessage" \
+    "Git commit messages now follow repository policy" "(#644)"
 
 # ---- Retire global Git hooks ----
 #
@@ -9355,8 +9152,6 @@ prefix = [
 DIRENV_CONF
     configured "direnv configured (hidden env diff, auto-trust ~/Code)"
 
-# Set RIPGREP_CONFIG_PATH in zshrc (needed for ripgrep to read config)
-# This will be in the managed block below
 
 fi  # configs (end of second configs segment)
 
@@ -12164,8 +11959,6 @@ export PATH="$HOME/Scripts/bin:$PATH"
 
 # -- Environment Variables ----------------------------------------------------
 
-# ripgrep config path
-export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 
 # OMP local provider. Port 8080 belongs to the managed SearXNG instance.
 export LLAMA_CPP_BASE_URL="http://127.0.0.1:8081"
@@ -12431,14 +12224,10 @@ echo "=========================================="
 echo ""
 info "Configured highlights:"
 echo "  [~/.zshrc]              Shell config (auto-written with managed block)"
-echo "  [~/.ssh/config]         SSH multiplexing, keychain, keep-alive"
-echo "  [~/.gitignore_global]   Global gitignore (.DS_Store, .env, node_modules)"
-echo "  [~/.gitconfig]          Git aliases, rebase, delta, difftastic"
+echo "  [~/.ssh/config]         SSH multiplexing and GitHub keychain"
+echo "  [~/.gitignore_global]   Global Git ignore for macOS filesystem noise"
+echo "  [~/.gitconfig]          Git aliases, display preferences, delta"
 echo "  [~/.gnupg/]             GPG with pinentry-mac"
-echo "  [~/.npmrc]              save-exact, no telemetry"
-echo "  [~/.editorconfig]       Cross-editor consistency"
-echo "  [~/.prettierrc]         Global Prettier defaults"
-echo "  [~/.curlrc]             Follow redirects, retry, compression"
 echo "  [~/.docker/daemon.json] BuildKit, log rotation"
 echo "  [~/.aria2/aria2.conf]   16 connections, auto-resume"
 echo "  [~/.config/starship]    Dracula-Sakura prompt"
