@@ -2030,6 +2030,32 @@ _uv_tool_install() {
     progress
 }
 
+# setup_yaml_helper
+# PyYAML is a library, so keep it in an isolated helper interpreter. The helper
+# uses the same declared Python runtime that mise installs for the machine.
+setup_yaml_helper() {
+    local yaml_venv="$HOME/.local/share/dev-setup/yaml-venv"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would create PyYAML helper venv with Python $PYTHON_VERSION (PyYAML) -> yaml-py"
+    elif ! installed uv; then
+        warn "Skipping PyYAML helper venv — uv not installed"
+    elif [[ -x "$yaml_venv/bin/python" ]] && "$yaml_venv/bin/python" -c 'import yaml' 2>/dev/null; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$yaml_venv/bin/python" "$HOME/.local/bin/yaml-py"
+        warn "yaml-py venv already present"
+    else
+        info "Creating PyYAML helper venv with Python $PYTHON_VERSION..."
+        if uv venv --python "$PYTHON_VERSION" "$yaml_venv" >> "$LOG_FILE" 2>&1 \
+            && uv pip install --python "$yaml_venv/bin/python" PyYAML >> "$LOG_FILE" 2>&1; then
+            mkdir -p "$HOME/.local/bin"
+            ln -sf "$yaml_venv/bin/python" "$HOME/.local/bin/yaml-py"
+            success "yaml-py ready (PyYAML helper Python for local YAML scripts)"
+        else
+            warn "Could not create PyYAML helper venv"
+        fi
+    fi
+}
+
 # cargo_install <pkg> <cmd-name> <description> [cargo install args...]
 # Installs a Rust CLI from crates.io or a Git repository. The command name is
 # checked first because package and binary names can differ (chamber-tui -> chamber).
@@ -3547,31 +3573,8 @@ fi
 brew_install "go" "Go (lang)"
 brew_install "uv" "uv (fast Python package manager — 10-100x faster than pip)"
 # PyYAML is a library rather than a user-facing CLI, so keep it out of the main
-# interpreter and expose a tiny dedicated helper Python instead. This mirrors the
-# office-py pattern: local scripts and ad hoc one-liners can `import yaml` without
-# teaching the machine to `pip install` into the global runtime this setup pins via mise.
-if [[ "$DRY_RUN" == "true" ]]; then
-    info "[DRY RUN] Would create PyYAML helper venv (PyYAML) -> yaml-py"
-elif installed uv; then
-    YAML_VENV="$HOME/.local/share/dev-setup/yaml-venv"
-    if [[ -x "$YAML_VENV/bin/python" ]] && "$YAML_VENV/bin/python" -c 'import yaml' 2>/dev/null; then
-        mkdir -p "$HOME/.local/bin"
-        ln -sf "$YAML_VENV/bin/python" "$HOME/.local/bin/yaml-py"
-        warn "yaml-py venv already present"
-    else
-        info "Creating PyYAML helper venv..."
-        if uv venv --python 3.13 "$YAML_VENV" >> "$LOG_FILE" 2>&1 \
-            && uv pip install --python "$YAML_VENV/bin/python" PyYAML >> "$LOG_FILE" 2>&1; then
-            mkdir -p "$HOME/.local/bin"
-            ln -sf "$YAML_VENV/bin/python" "$HOME/.local/bin/yaml-py"
-            success "yaml-py ready (PyYAML helper Python for local YAML scripts)"
-        else
-            warn "Could not create PyYAML helper venv"
-        fi
-    fi
-else
-    warn "Skipping PyYAML helper venv — uv not installed"
-fi
+# interpreter and expose a tiny dedicated helper Python instead.
+setup_yaml_helper
 brew_install "jq" "jq (JSON processor)"
 brew_install "direnv" "direnv (per-project env vars)"
 brew_install "cmake" "CMake"
@@ -4312,7 +4315,7 @@ banner "API Development"
 
 uv_tool_install "posting" posting \
     "Posting (terminal HTTP client with git-friendly YAML collections)" \
-    "Posting installed (HTTP client TUI)" --python 3.13
+    "Posting installed (HTTP client TUI)" --python "$PYTHON_VERSION"
 
 fi  # api
 

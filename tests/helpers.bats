@@ -1399,3 +1399,57 @@ EOF
     '
     [ "$status" -eq 0 ]
 }
+
+@test "setup_yaml_helper uses the declared Python runtime and creates an importable yaml-py (#659)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/uv" <<"EOF"
+#!/usr/bin/env bash
+printf "%s\n" "$*" >> "$HOME/uv.log"
+case "$1 $2" in
+    "venv --python")
+        mkdir -p "$4/bin"
+        cat > "$4/bin/python" <<"PYTHON"
+#!/usr/bin/env bash
+if [[ "$1" == "-c" && "$2" == "import yaml" ]]; then
+    [[ -f "$(dirname "$(dirname "$0")")/.pyyaml" ]]
+    exit $?
+fi
+PYTHON
+        chmod +x "$4/bin/python"
+        ;;
+    "pip install")
+        touch "$(dirname "$(dirname "$4")")/.pyyaml"
+        ;;
+esac
+EOF
+        chmod +x "$HOME/bin/uv"
+        export PATH="$HOME/bin:/usr/bin:/bin"
+
+        setup_yaml_helper
+        "$HOME/.local/bin/yaml-py" -c "import yaml"
+        cat "$HOME/uv.log"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"venv --python 3.12 $TEST_TMP/.local/share/dev-setup/yaml-venv"* ]]
+    [[ "$output" == *"pip install --python $TEST_TMP/.local/share/dev-setup/yaml-venv/bin/python PyYAML"* ]]
+}
+
+@test "uv_tool_install forwards the declared Python runtime selection (#659)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/uv" <<"EOF"
+#!/usr/bin/env bash
+printf "%s\n" "$*" > "$HOME/uv.log"
+EOF
+        chmod +x "$HOME/bin/uv"
+        export PATH="$HOME/bin:/usr/bin:/bin"
+
+        _uv_tool_install posting posting "Posting" "Posting installed" --python "$PYTHON_VERSION"
+        cat "$HOME/uv.log"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tool install --python 3.12 posting"* ]]
+}
