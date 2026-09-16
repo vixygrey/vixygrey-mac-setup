@@ -1,0 +1,38 @@
+name: Local build review
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream-releases:
+    name: Review pinned local builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Compare pinned releases with upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          check_release() {
+            local label="$1" repository="$2" pinned="$3" latest
+            latest="$(gh api "repos/$repository/releases/latest" --jq .tag_name)"
+            if [[ "$pinned" == "$latest" ]]; then
+              echo "$label is current at $pinned"
+            else
+              echo "::warning title=$label review required::$label is pinned at $pinned. Upstream released $latest."
+            fi
+          }
+
+          llama_version="$(awk -F '"' '/^LLAMA_CPP_VERSION=/{print $2; exit}' scripts/setup-dev-tools-mac.sh)"
+          mullvad_version="$(awk -F '"' '/^MULLVAD_TUI_VERSION=/{print $2; exit}' scripts/setup-dev-tools-mac.sh)"
+          test -n "$llama_version"
+          test -n "$mullvad_version"
+          check_release "llama.cpp" "ggml-org/llama.cpp" "$llama_version"
+          check_release "mullvad-tui" "d10n/mullvad-tui" "$mullvad_version"

@@ -3731,7 +3731,7 @@ fi
 brew_install "e1s" "e1s (ECS TUI — clusters/services/tasks, exec, logs, port-forward)"
 brew_install "stu" "stu (S3 TUI — browse/preview/download buckets)"
 # e2c (EC2 TUI) — young project; not on Homebrew, install via Go.
-go_install github.com/nlamirault/e2c/cmd/e2c@latest e2c "e2c (EC2 TUI)"
+go_install github.com/nlamirault/e2c/cmd/e2c@v0.5.0 e2c "e2c (EC2 TUI)"
 # claws — broad all-AWS TUI (young); cask from the clawscli tap.
 trust_tap clawscli/tap
 brew_cask_install "clawscli/tap/claws" "claws (all-AWS TUI — ~70 services, k9s-style; young project)"
@@ -4234,7 +4234,7 @@ cargo_install "cfait" cfait \
     "cfait (offline-first task manager TUI with optional CalDAV sync)" --locked
 cargo_install "caligula" caligula \
     "Caligula (disk imaging TUI with verification and compressed-image support)" --locked
-go_install "github.com/dimonomid/nerdlog/cmd/nerdlog@latest" nerdlog \
+go_install "github.com/dimonomid/nerdlog/cmd/nerdlog@v1.10.0" nerdlog \
     "Nerdlog (multi-host log viewer with live filtering, histograms, and SSH transport)"
 
 # -- Additional TUI/CLI tools (homebrew-core) --
@@ -4291,9 +4291,8 @@ brew_install "duckdb" "duckdb (local analytics database for CSV/JSON/Parquet)"
 uv_tool_install 'harlequin[postgres,mysql,s3]' harlequin \
     "harlequin (terminal SQL IDE; postgres,mysql,s3 adapters)" \
     "harlequin installed (DuckDB + Postgres + MySQL + S3 adapters)"
-# usql — not in Homebrew, install via Go (@latest intentionally unpinned).
-# go_install is DRY_RUN-aware and lands the binary in GOBIN (on PATH).
-go_install github.com/xo/usql@latest usql "usql (universal SQL CLI)"
+# usql — not in Homebrew. Install the reviewed Go release in GOBIN.
+go_install github.com/xo/usql@v0.21.5 usql "usql (universal SQL CLI)"
 brew_install "dbmate" "dbmate (lightweight DB migrations)"
 # DBeaver (GUI) remains replaced by harlequin, usql, and DuckDB.
 
@@ -4535,7 +4534,7 @@ fi
 unset OMNISHARP_VERSION OMNISHARP_PREFIX OMNISHARP_APP OMNISHARP_BIN OMNISHARP_LINK
 unset OMNISHARP_ASSET OMNISHARP_SHA256 OMNISHARP_URL _omnisharp_resolved
 
-go_install golang.org/x/tools/gopls@latest gopls "gopls (Go language server)"
+go_install golang.org/x/tools/gopls@v0.23.0 gopls "gopls (Go language server)"
 
 # pi was retired in #513. omp replaces its agent runtime, web search, local model
 # discovery, approval policies, and one-shot prompt use.
@@ -4545,7 +4544,7 @@ brew_install "can1357/tap/omp" "omp (Oh My Pi — workload-routed agent harness)
 
 # Clipboard history
 # clipse — TUI clipboard manager (replaces Raycast clipboard history). Not on Homebrew.
-go_install github.com/savedra1/clipse@latest clipse "clipse (TUI clipboard manager)"
+go_install github.com/savedra1/clipse@v1.2.1 clipse "clipse (TUI clipboard manager)"
 
 # Dotfile management
 brew_install "chezmoi" "chezmoi (dotfile manager — backup/restore configs across machines)"

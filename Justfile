@@ -13,8 +13,9 @@ lint:
     bash -n {{SCRIPT}}
     shellcheck -x -S warning {{SCRIPT}}
 
-# Helper unit tests (runs the helper layer under SETUP_LIB_ONLY=1)
+# Supply-chain policy and helper unit tests
 test:
+    tests/ci/check-supply-chain.sh
     bats tests/
 
 # Preview a full run without touching the machine
