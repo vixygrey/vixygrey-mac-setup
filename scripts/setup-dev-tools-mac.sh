@@ -1980,6 +1980,30 @@ _kiro_extension_install() {
     fi
 }
 
+# kiro_extension_uninstall <extension-id> <display-name>
+# Remove a retired generator extension only when Kiro reports that it is present.
+kiro_extension_uninstall() {
+    local extension="$1" name="${2:-$1}"
+    if ! installed kiro; then
+        warn "Skipping retired $name — Kiro not installed"
+        return 0
+    fi
+    _ensure_kiro_extension_snapshot
+    if ! printf '%s\n' "$_KIRO_EXTENSIONS" | grep -Fxiq "$extension"; then
+        return 0
+    elif [[ "$DRY_RUN" == "true" ]]; then
+        info "[DRY RUN] Would remove Kiro extension: $name"
+    else
+        info "Removing retired Kiro extension: $name..."
+        if kiro --uninstall-extension "$extension" >> "$LOG_FILE" 2>&1; then
+            _KIRO_EXTENSIONS="$(printf '%s\n' "$_KIRO_EXTENSIONS" | grep -Fvx "$extension" || true)"
+            success "$name removed from Kiro"
+        else
+            error "Failed to remove Kiro extension: $name"
+        fi
+    fi
+}
+
 
 
 # go_install <import-path@ver> <cmd-name> <description>
@@ -4372,7 +4396,8 @@ kiro_extension_install "redhat.vscode-yaml" "YAML"
 kiro_extension_install "rust-lang.rust-analyzer" "rust-analyzer"
 kiro_extension_install "shardulm94.trailing-spaces" "Trailing Spaces"
 kiro_extension_install "shd101wyy.markdown-preview-enhanced" "Markdown Preview Enhanced"
-kiro_extension_install "streetsidesoftware.code-spell-checker" "Code Spell Checker"
+kiro_extension_install "tekumara.typos-vscode" "Typos spell checker"
+kiro_extension_uninstall "streetsidesoftware.code-spell-checker" "Code Spell Checker"
 kiro_extension_install "stylelint.vscode-stylelint" "Stylelint"
 kiro_extension_install "tamasfe.even-better-toml" "Even Better TOML"
 kiro_extension_install "timonwong.shellcheck" "ShellCheck"
@@ -6056,10 +6081,7 @@ KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
   "markdown-preview-enhanced.enableScriptExecution": false,
   "markdown-preview-enhanced.enablePreviewScripts": false,
   "markdown-preview-enhanced.d2Path": "d2",
-  "cSpell.useGitignore": true,
-  "cSpell.language": "en",
-  "cSpell.diagnosticLevel": "Information",
-  "cSpell.minWordLength": 4,
+  "typos.diagnosticSeverity": "Information",
   "stylelint.enable": true,
   "stylelint.run": "onType",
   "stylelint.validate": ["css", "scss", "sass", "less", "postcss"],
