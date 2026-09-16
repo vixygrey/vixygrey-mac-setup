@@ -986,8 +986,9 @@ The script will:
 - Skip already-installed tools
 - Update the `~/.zshrc` managed block
 - Export a fresh Brewfile
-- Apply any new macOS defaults
 - Report what changed
+
+Run `./scripts/setup-dev-tools-mac.sh --apply-macos-defaults` to apply macOS preferences and DNS changes.
 
 ---
 

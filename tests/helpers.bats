@@ -1082,7 +1082,7 @@ EOF
         declare -A SUDO_CATEGORY_REASON=([macos-defaults]="BLURB_THAT_MUST_NOT_APPEAR")
         declare -A SUDO_CATEGORY_PREDICATE=([macos-defaults]=fake_pred)
         fake_pred() { printf "%s\n" "network time" "startup chime"; return 0; }
-        DRY_RUN=false; ONLY_CATEGORIES=(); SKIP_CATEGORIES=()
+        DRY_RUN=false; ONLY_CATEGORIES=(); SKIP_CATEGORIES=(); APPLY_MACOS_DEFAULTS=true
         sudo_reasons'
     [ "$status" -eq 0 ]
     [[ "$output" == *"network time (macos-defaults)"* ]]
@@ -1098,7 +1098,7 @@ EOF
         declare -A SUDO_CATEGORY_REASON=([macos-defaults]="blurb")
         declare -A SUDO_CATEGORY_PREDICATE=([macos-defaults]=fake_pred)
         fake_pred() { return 1; }
-        DRY_RUN=false; ONLY_CATEGORIES=(); SKIP_CATEGORIES=()
+        DRY_RUN=false; ONLY_CATEGORIES=(); SKIP_CATEGORIES=(); APPLY_MACOS_DEFAULTS=true
         echo "[$(sudo_reasons)]"'
     [ "$status" -eq 0 ]
     [[ "$output" == *"[]"* ]]
@@ -1318,4 +1318,22 @@ EOF
     '
     [ "$status" -eq 0 ]
     [ "$output" = $'DEFAULT_DISABLED\nEXPLICIT_ENABLED' ]
+}
+
+@test "macOS defaults require explicit selection (#646)" {
+    run run_with_helpers '
+        DRY_RUN=false
+        PRIVILEGED_WORK_SKIPPED=false
+        SKIP_CATEGORIES=()
+        ONLY_CATEGORIES=()
+        APPLY_MACOS_DEFAULTS=false
+        should_run macos-defaults && echo DEFAULT_ENABLED || echo DEFAULT_DISABLED
+        APPLY_MACOS_DEFAULTS=true
+        should_run macos-defaults && echo FLAG_ENABLED || echo FLAG_DISABLED
+        APPLY_MACOS_DEFAULTS=false
+        ONLY_CATEGORIES=(macos-defaults)
+        should_run macos-defaults && echo CATEGORY_ENABLED || echo CATEGORY_DISABLED
+    '
+    [ "$status" -eq 0 ]
+    [ "$output" = $'DEFAULT_DISABLED\nFLAG_ENABLED\nCATEGORY_ENABLED' ]
 }

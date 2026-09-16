@@ -239,6 +239,7 @@ FORCE_BREW_DOCTOR=false
 INTERACTIVE=false
 NO_PROMPT=false
 WITH_SERVICES=false
+APPLY_MACOS_DEFAULTS=false
 BREW_INSTALLED_THIS_RUN=false
 BREW_DOCTOR_RAN=false
 SKIP_CATEGORIES=()
@@ -672,17 +673,24 @@ interactive_select() {
     echo ""
 
     if command -v gum &>/dev/null; then
-        # Build label list: "category — description"
+        # Build label list. macOS defaults remain unselected unless the user
+        # explicitly requests them with --apply-macos-defaults.
         local labels=()
+        local selected_labels=()
         for cat in "${ALL_CATEGORIES[@]}"; do
-            labels+=("$cat — ${CATEGORY_DESC[$cat]:-}")
+            local label="$cat — ${CATEGORY_DESC[$cat]:-}"
+            labels+=("$label")
+            if [[ "$cat" != "macos-defaults" || "$APPLY_MACOS_DEFAULTS" == "true" ]]; then
+                selected_labels+=("$label")
+            fi
         done
+        local initially_selected
+        initially_selected=$(IFS=,; echo "${selected_labels[*]}")
 
-        # gum choose with multi-select, all pre-selected
         local selected
         selected=$(printf '%s\n' "${labels[@]}" | gum choose --no-limit --height=35 \
-            --header="Space to toggle, Enter to confirm" \
-            --selected="*" \
+            --header="Space to toggle, Enter to confirm. macOS defaults require selection." \
+            --selected="$initially_selected" \
             --cursor-prefix="[ ] " --selected-prefix="[✓] " --unselected-prefix="[ ] ") || true
 
         if [[ -z "$selected" ]]; then
@@ -695,14 +703,17 @@ interactive_select() {
             ONLY_CATEGORIES+=("${line%% — *}")
         done <<< "$selected"
     else
-        # Fallback: numbered menu with toggle
+        # Fallback: macOS defaults remain unselected unless explicitly requested.
         local -a selected_flags=()
-        for _ in "${ALL_CATEGORIES[@]}"; do
-            selected_flags+=(1)  # all selected by default
+        local category
+        for category in "${ALL_CATEGORIES[@]}"; do
+            if [[ "$category" == "macos-defaults" && "$APPLY_MACOS_DEFAULTS" != "true" ]]; then
+                selected_flags+=(0)
+            else
+                selected_flags+=(1)
+            fi
         done
-
         while true; do
-            echo -e "${BOLD}Toggle categories (all selected by default):${NC}"
             echo ""
             for i in "${!ALL_CATEGORIES[@]}"; do
                 local cat="${ALL_CATEGORIES[$i]}"
@@ -788,13 +799,15 @@ show_help() {
     echo "  --only <cats>       Only run these categories (comma-separated)"
     echo "                      Add 'configs' to also refresh generated config —"
     echo "                      a category installs its tools but does not configure them"
+    echo "  --apply-macos-defaults"
+    echo "                      Apply macOS preferences and DNS changes. Default runs do not."
     echo "  --with-services     Create the llama.cpp localhost service and the Clipse clipboard listener"
     echo "  --list-categories   List all available categories"
     echo "  --list              List declared Homebrew and npm packages"
     echo "  --version           Show script version"
     echo ""
     echo "Examples:"
-    echo "  ./setup-dev-tools-mac.sh                          # Install everything"
+    echo "  ./setup-dev-tools-mac.sh                          # Install default categories"
     echo "  ./setup-dev-tools-mac.sh -i                       # Interactive category picker"
     echo "  ./setup-dev-tools-mac.sh --dry-run                # Preview only"
     echo "  ./setup-dev-tools-mac.sh --list                   # List package declarations"
@@ -807,6 +820,8 @@ show_help() {
     echo "  ./setup-dev-tools-mac.sh --only git,configs      # git tooling AND its config/hooks"
     echo "  ./setup-dev-tools-mac.sh --only configs          # regenerate every config file"
     echo "  ./setup-dev-tools-mac.sh --with-services          # Create local background services"
+    echo "  ./setup-dev-tools-mac.sh --apply-macos-defaults # Apply macOS preferences and DNS"
+    echo "  ./setup-dev-tools-mac.sh --only macos-defaults   # Apply macOS preferences and DNS"
     echo ""
 }
 
@@ -878,6 +893,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --with-services)
             WITH_SERVICES=true
+            shift
+            ;;
+        --apply-macos-defaults)
+            APPLY_MACOS_DEFAULTS=true
             shift
             ;;
         --no-prompt)
@@ -982,13 +1001,17 @@ should_run() {
     local category="$1"
     [[ "$category" == "macos-defaults" && "$PRIVILEGED_WORK_SKIPPED" == "true" ]] && return 1
 
-    # If --only is set, only run matching categories
+    # If --only is set, only run matching categories.
+    # --only macos-defaults is itself the explicit opt-in.
     if [[ ${#ONLY_CATEGORIES[@]} -gt 0 ]]; then
         for c in "${ONLY_CATEGORIES[@]}"; do
             [[ "$c" == "$category" ]] && return 0
         done
         return 1
     fi
+
+    # A normal or interactive default run must not alter macOS preferences.
+    [[ "$category" == "macos-defaults" && "$APPLY_MACOS_DEFAULTS" != "true" ]] && return 1
 
     # If --skip is set, skip matching categories
     for c in "${SKIP_CATEGORIES[@]}"; do
@@ -12098,8 +12121,12 @@ echo "  [~/.justfile]           Global task runner recipes (run them with: gj --
 echo "  [~/.config/brewfile]    Brewfile snapshot for reproducibility"
 echo "  [~/.config/micro]       micro — Dracula, on-screen key menu, house indent rules"
 echo "  [lazygit]               Dracula-Sakura theme, delta pager"
-echo "  [Finder]                Hidden files, path bar, list view"
-echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
+if should_run "macos-defaults"; then
+    echo "  [Finder]                Hidden files, path bar, list view"
+    echo "  [macOS]                 Dock, keyboard, screenshots, Spotlight hotkey, Stage Manager"
+else
+    echo "  [macOS]                 Run --apply-macos-defaults to change preferences and DNS"
+fi
 echo ""
 info "Optional Chrome extensions (manual install):"
 echo "  - axe DevTools (accessibility testing)"
@@ -12107,7 +12134,7 @@ echo "  - React Developer Tools"
 echo "  - JSON Formatter"
 echo ""
 info "Terminal and search:"
-echo "  - cmd+space           open Spotlight (log out/in after migration)"
+echo "  - cmd+space           open Spotlight (after --apply-macos-defaults and a log out/in)"
 echo "  - ff                  find and open a file"
 echo "  - rgf <pattern>       live code/content search    s <q>  Spotlight-index search"
 echo "  - clip                clipboard history (clipse)"
@@ -12139,7 +12166,8 @@ if [[ "$DRY_RUN" != "true" ]]; then
 Complete the manual permissions, credentials, and account steps after the script finishes.
 
 ## macOS permissions and settings
-- [ ] Log out, then log in to apply the restored Spotlight shortcuts and visible menu bar.
+- [ ] To apply the setup macOS preferences and DNS servers, run `setup-dev-tools-mac.sh --apply-macos-defaults`.
+- [ ] After an opt-in macOS defaults run, log out, then log in to apply the Spotlight shortcuts and visible menu bar.
 - [ ] Open Kitty and confirm the Dracula-Sakura palette and JetBrains Mono Nerd Font.
 - [ ] Select `~/Media/photos/dracula-sakura.jpg` in System Settings if you want the bundled wallpaper.
 
@@ -14167,7 +14195,11 @@ info "Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
 echo "  2. Work through ~/Desktop/POST_SETUP_CHECKLIST.md."
 echo "  3. Review KEYBOARD_SHORTCUTS.md, TOOLKIT_SUMMARY.md, and TOOL_REFERENCE.md."
-echo "  4. Log out, then log in to apply the Spotlight and menu bar settings."
+if should_run "macos-defaults"; then
+    echo "  4. Log out, then log in to apply the Spotlight and menu bar settings."
+else
+    echo "  4. Run --apply-macos-defaults to change macOS preferences and DNS."
+fi
 echo "  5. Enable FileVault and the macOS firewall."
 if services_requested; then
     echo "  6. Confirm llama.cpp at http://127.0.0.1:8081/v1/models."
@@ -14492,7 +14524,8 @@ config_split_notice
 
 if [[ "$DRY_RUN" == "true" ]]; then
     echo -e "${YELLOW}${BOLD}  This was a dry run — no changes were made.${NC}"
-    echo -e "${YELLOW}  Run without --dry-run to install everything.${NC}"
+    echo -e "${YELLOW}  Run without --dry-run to install default categories.${NC}"
+    echo -e "${YELLOW}  Add --apply-macos-defaults to change macOS preferences and DNS.${NC}"
     echo ""
 fi
 

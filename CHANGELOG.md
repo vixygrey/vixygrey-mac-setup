@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Changed the default OMP model from GPT-5.6-Luna to GPT-5.6-Terra (#634).
 - Required explicit mise project trust and runtime installation (#652).
 - Required `--with-services` before the setup creates local llama.cpp and Clipse login services (#650).
+- Required explicit macOS defaults selection before the setup changes preferences or DNS servers (#646).
 
 
 ### Removed
