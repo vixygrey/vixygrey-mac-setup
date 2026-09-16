@@ -903,6 +903,34 @@ EOF
     [[ "$output" == *"[DRY RUN] Would install Kiro extension: CodeLLDB"* ]]
 }
 
+@test "kiro_extension_uninstall removes only a listed retired extension (#674)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        mkdir -p "$HOME/bin"
+        printf "%s\n" streetsidesoftware.code-spell-checker > "$HOME/extensions"
+        cat > "$HOME/bin/kiro" <<"EOF"
+#!/usr/bin/env bash
+case "$1" in
+    --list-extensions)
+        cat "$HOME/extensions"
+        ;;
+    --install-extension|--uninstall-extension)
+        printf "%s %s\n" "$1" "$2" >> "$HOME/operations.log"
+        ;;
+esac
+EOF
+        chmod +x "$HOME/bin/kiro"
+        export PATH="$HOME/bin:$PATH"
+
+        kiro_extension_install tekumara.typos-vscode "Typos spell checker"
+        kiro_extension_uninstall streetsidesoftware.code-spell-checker "Code Spell Checker"
+        cat "$HOME/operations.log"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"--install-extension tekumara.typos-vscode"* ]]
+    [[ "$output" == *"--uninstall-extension streetsidesoftware.code-spell-checker"* ]]
+}
+
 
 
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
