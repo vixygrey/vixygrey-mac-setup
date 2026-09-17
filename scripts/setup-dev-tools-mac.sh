@@ -4384,7 +4384,6 @@ kiro_extension_install "ecmel.vscode-html-css" "HTML CSS Support"
 kiro_extension_install "editorconfig.editorconfig" "EditorConfig"
 kiro_extension_install "esbenp.prettier-vscode" "Prettier"
 kiro_extension_install "formulahendry.auto-rename-tag" "Auto Rename Tag"
-kiro_extension_install "gruntfuggly.todo-tree" "Todo Tree"
 kiro_extension_install "llvm-vs-code-extensions.lldb-dap" "LLDB DAP"
 kiro_extension_install "mikestead.dotenv" "DotENV"
 kiro_extension_install "ms-azuretools.vscode-containers" "Container Tools"
@@ -4397,6 +4396,7 @@ kiro_extension_install "rust-lang.rust-analyzer" "rust-analyzer"
 kiro_extension_install "shardulm94.trailing-spaces" "Trailing Spaces"
 kiro_extension_install "shd101wyy.markdown-preview-enhanced" "Markdown Preview Enhanced"
 kiro_extension_install "tekumara.typos-vscode" "Typos spell checker"
+kiro_extension_uninstall "gruntfuggly.todo-tree" "Todo Tree"
 kiro_extension_uninstall "streetsidesoftware.code-spell-checker" "Code Spell Checker"
 kiro_extension_install "stylelint.vscode-stylelint" "Stylelint"
 kiro_extension_install "tamasfe.even-better-toml" "Even Better TOML"
@@ -5985,29 +5985,6 @@ KIRO_DEFAULTS=$(cat <<'KIRO_CONF'
     "vue",
     "svelte"
   ],
-  "todo-tree.general.tags": [
-    "BUG",
-    "FIXME",
-    "HACK",
-    "TODO",
-    "XXX",
-    "[ ]",
-    "[x]"
-  ],
-  "todo-tree.filtering.excludeGlobs": [
-    "**/.git/**",
-    "**/node_modules/**",
-    "**/vendor/**",
-    "**/dist/**",
-    "**/build/**"
-  ],
-  "todo-tree.tree.showCountsInTree": true,
-  "todo-tree.highlights.customHighlight": {
-    "BUG": {"icon": "bug", "foreground": "#FF7AA8"},
-    "FIXME": {"icon": "flame", "foreground": "#FF7AA8"},
-    "HACK": {"icon": "tools", "foreground": "#FFCF93"},
-    "TODO": {"icon": "check", "foreground": "#9BE7FF"}
-  },
   "lldb-dap.captureSessionLogs": false,
   "lldb-dap.disableASLR": false,
   "lldb-dap.enableAutoVariableSummaries": true,

@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 > Release notes for 7.0.0–7.1.1 live in [GitHub Releases](https://github.com/vixygrey/vixygrey-dev-setup/releases) (auto-generated). This file resumes hand-written notes at 7.2.0.
 
+## [Unreleased]
+
+### Removed
+- Removed the Kiro Todo Tree extension and its generated defaults (#678).
+
+[Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.4.0...HEAD
+
 ## [8.4.0] - 2026-09-16
 
 ### Changed
