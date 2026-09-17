@@ -903,11 +903,11 @@ EOF
     [[ "$output" == *"[DRY RUN] Would install Kiro extension: CodeLLDB"* ]]
 }
 
-@test "kiro_extension_uninstall removes only a listed retired extension (#674)" {
+@test "kiro_extension_uninstall retires Code Spell Checker and Todo Tree only (#674, #683)" {
     run run_with_helpers '
         export LOG_FILE="$HOME/setup.log"
         mkdir -p "$HOME/bin"
-        printf "%s\n" streetsidesoftware.code-spell-checker > "$HOME/extensions"
+        printf "%s\n" streetsidesoftware.code-spell-checker gruntfuggly.todo-tree > "$HOME/extensions"
         cat > "$HOME/bin/kiro" <<"EOF"
 #!/usr/bin/env bash
 case "$1" in
@@ -924,11 +924,14 @@ EOF
 
         kiro_extension_install tekumara.typos-vscode "Typos spell checker"
         kiro_extension_uninstall streetsidesoftware.code-spell-checker "Code Spell Checker"
+        kiro_extension_uninstall gruntfuggly.todo-tree "Todo Tree"
         cat "$HOME/operations.log"
     '
     [ "$status" -eq 0 ]
     [[ "$output" == *"--install-extension tekumara.typos-vscode"* ]]
     [[ "$output" == *"--uninstall-extension streetsidesoftware.code-spell-checker"* ]]
+    [[ "$output" == *"--uninstall-extension gruntfuggly.todo-tree"* ]]
+    [[ "$output" != *"--install-extension gruntfuggly.todo-tree"* ]]
 }
 
 @test "kiro_extension_is_installed matches exact registry identifiers (#681)" {

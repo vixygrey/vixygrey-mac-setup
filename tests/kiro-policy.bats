@@ -12,8 +12,8 @@ teardown() {
     rm -rf "$TEST_TMP"
 }
 
-@test "Kiro defaults configure Typos without obsolete Code Spell Checker settings (#674)" {
-    run python3 -c 'import json, sys; settings = json.load(open(sys.argv[1])); assert settings["typos.diagnosticSeverity"] == "Information"; assert not any(key.startswith("cSpell.") for key in settings)' "$GENERATED_KIRO_CONFIG"
+@test "Kiro defaults configure Typos without obsolete spell-checker or Todo Tree settings (#674, #683)" {
+    run python3 -c 'import json, sys; settings = json.load(open(sys.argv[1])); assert settings["typos.diagnosticSeverity"] == "Information"; assert not any(key.startswith(("cSpell.", "todo-tree.")) for key in settings)' "$GENERATED_KIRO_CONFIG"
 
     [ "$status" -eq 0 ]
 }

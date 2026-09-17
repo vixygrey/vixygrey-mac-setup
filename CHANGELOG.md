@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Added Kiro Todo Tree retirement regression coverage (#683).
+
 ### Removed
 - Removed the Kiro Todo Tree extension and its generated defaults (#678).
 - Removed the `new-project` helper, its `nproj` alias, and generated project scaffolding (#685).
