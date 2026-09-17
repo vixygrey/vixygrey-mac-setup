@@ -931,6 +931,36 @@ EOF
     [[ "$output" == *"--uninstall-extension streetsidesoftware.code-spell-checker"* ]]
 }
 
+@test "kiro_extension_is_installed matches exact registry identifiers (#681)" {
+    run run_with_helpers '
+        export LOG_FILE="$HOME/setup.log"
+        mkdir -p "$HOME/bin"
+        printf "%s\n" gruntfuggly.todo-tree-backup > "$HOME/extensions"
+        cat > "$HOME/bin/kiro" <<"EOF"
+#!/usr/bin/env bash
+[[ "$1" == "--list-extensions" ]] && cat "$HOME/extensions"
+EOF
+        chmod +x "$HOME/bin/kiro"
+        export PATH="$HOME/bin:$PATH"
+
+        if kiro_extension_is_installed gruntfuggly.todo-tree; then
+          echo PRESENT
+        else
+          echo ABSENT
+        fi
+        printf "%s\n" gruntfuggly.todo-tree > "$HOME/extensions"
+        _kiro_extensions_ready=
+        if kiro_extension_is_installed gruntfuggly.todo-tree; then
+          echo PRESENT
+        else
+          echo ABSENT
+        fi
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ABSENT"* ]]
+    [[ "$output" == *$'ABSENT\nPRESENT'* ]]
+}
+
 
 
 @test "run_remote_installer: executes the downloaded installer through the requested runner (#430)" {
