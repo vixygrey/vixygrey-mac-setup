@@ -627,7 +627,6 @@ Spotlight to find things) rather than agonizing over where it "should" go.
 
 | Script | Alias | Description |
 |--------|-------|-------------|
-| `new-project` | `nproj` | Scaffold an agent-ready repo template: AGENTS.md, CONVENTIONS.md, and LF-safe .editorconfig and .gitattributes. Add `--justfile` for an optional minimal starter Justfile |
 | `clone-work` | `cwork` | Clone a work repo into `~/Code/work/<org>/<repo>` |
 | `clone-personal` | `cpers` | Clone a personal repo into `~/Code/personal/<repo>` |
 | `clean-downloads` | `cleandl` | Delete files in ~/Downloads older than 30 days (interactive) |
@@ -850,7 +849,6 @@ All aliases are auto-written to `~/.zshrc`:
 | `watchrun` | `watchexec` | Watch and rerun on changes |
 | `update` | `topgrade` | Update everything |
 | `sysinfo` | `fastfetch` | Quick system info |
-| `nproj` | `new-project` | Scaffold new project |
 | `cwork` | `clone-work` | Clone work repo |
 | `cpers` | `clone-personal` | Clone personal repo |
 | `dotback` | `backup-dotfiles` | Backup dotfiles via chezmoi |

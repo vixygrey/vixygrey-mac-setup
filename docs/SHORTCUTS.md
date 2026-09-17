@@ -104,7 +104,6 @@ Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, an
 
 | Alias | Script | What it does |
 |-------|--------|-------------|
-| `nproj` | `new-project` | Scaffold project with git + .editorconfig |
 | `cwork` | `clone-work` | Clone work repo into `~/Code/work/<org>/<repo>` |
 | `cpers` | `clone-personal` | Clone personal repo into `~/Code/personal/<repo>` |
 | `dotback` | `backup-dotfiles` | Push dotfiles via chezmoi |
