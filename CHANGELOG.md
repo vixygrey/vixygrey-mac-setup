@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Removed the Kiro Todo Tree extension and its generated defaults (#678).
 - Removed the `new-project` helper, its `nproj` alias, and generated project scaffolding (#685).
 
+### Fixed
+- Made `--verify` fail when the retired Kiro Todo Tree extension remains installed (#681).
+
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.4.0...HEAD
 
 ## [8.4.0] - 2026-09-16

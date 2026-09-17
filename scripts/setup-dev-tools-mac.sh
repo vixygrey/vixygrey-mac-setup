@@ -1954,6 +1954,13 @@ _ensure_kiro_extension_snapshot() {
     _kiro_extensions_ready=1
 }
 
+# kiro_extension_is_installed <extension-id>
+# Answers whether Kiro reports this exact registry extension identifier.
+kiro_extension_is_installed() {
+    _ensure_kiro_extension_snapshot
+    printf '%s\n' "$_KIRO_EXTENSIONS" | grep -Fxiq "$1"
+}
+
 # kiro_extension_install <extension-id> <display-name>
 # Installs a registry extension through Kiro's Code OSS command-line interface.
 kiro_extension_install() { _time_install_helper kiro _kiro_extension_install "$@"; }
@@ -1964,8 +1971,7 @@ _kiro_extension_install() {
         warn "Skipping $name — Kiro not installed"
         return 0
     fi
-    _ensure_kiro_extension_snapshot
-    if printf '%s\n' "$_KIRO_EXTENSIONS" | grep -Fxiq "$extension"; then
+    if kiro_extension_is_installed "$extension"; then
         warn "$name already installed in Kiro"
     elif [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would install Kiro extension: $name"
@@ -1988,8 +1994,7 @@ kiro_extension_uninstall() {
         warn "Skipping retired $name — Kiro not installed"
         return 0
     fi
-    _ensure_kiro_extension_snapshot
-    if ! printf '%s\n' "$_KIRO_EXTENSIONS" | grep -Fxiq "$extension"; then
+    if ! kiro_extension_is_installed "$extension"; then
         return 0
     elif [[ "$DRY_RUN" == "true" ]]; then
         info "[DRY RUN] Would remove Kiro extension: $name"
@@ -3153,8 +3158,7 @@ fi
 #             compare it with where we write. This is the cheap check that catches
 #             the whole drift class: #329, #332 and the k9s skin were all path
 #             drift, none of them syntax.
-#   unchecked Neither is available. Listed by name so the gap stays visible rather
-#             than being quietly counted as a pass.
+#   absence   Run an assertion that a retired tool artifact is absent.
 #
 # The command field may contain '|' — `read` puts the remainder in the last var.
 if [[ "$VERIFY" == "true" ]]; then
@@ -3194,6 +3198,10 @@ if [[ "$VERIFY" == "true" ]]; then
             "$HOME/.config/kitty/kitty.conf"
     }
 
+    _verify_kiro_retired_extensions() {
+        ! kiro_extension_is_installed "gruntfuggly.todo-tree"
+    }
+
 
     VERIFY_TARGETS=(
         # Reading theme.dark rather than a model role keeps it honest when no
@@ -3211,6 +3219,7 @@ if [[ "$VERIFY" == "true" ]]; then
         # extension manifest, and theme files.
         "unchecked|Kiro settings|$HOME/Library/Application Support/Kiro/User/settings.json|"
         "unchecked|Kiro theme|$HOME/.kiro/extensions/vixygrey.dracula-sakura-1.0.0/themes/dracula-sakura-color-theme.json|"
+        "absence|kiro||_verify_kiro_retired_extensions"
         # Yazi has no headless validator or command that reports its config path.
         # Both TOML files carry official schema links for editor validation.
         "unchecked|yazi|$HOME/.config/yazi/theme.toml|"
@@ -3366,6 +3375,15 @@ if [[ "$VERIFY" == "true" ]]; then
                     printf "  ${RED}%-12s${NC} %s — reads a DIFFERENT path than we write\n" "FAIL" "$label"
                     printf "               ${DIM}we write:  %s${NC}\n" "$_cmp"
                     printf "               ${DIM}%s reads: %s${NC}\n" "$label" "$_vp"
+                    ((VERIFY_BAD++))
+                fi
+                ;;
+            absence)
+                if eval "$cmd" >/dev/null 2>&1; then
+                    printf "  ${GREEN}%-12s${NC} %s — retired extension is absent\n" "OK" "$label"
+                    ((VERIFY_OK++))
+                else
+                    printf "  ${RED}%-12s${NC} %s — retired extension remains installed\n" "FAIL" "$label"
                     ((VERIFY_BAD++))
                 fi
                 ;;
