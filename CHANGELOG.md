@@ -20,6 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 - Made `--verify` fail when the retired Kiro Todo Tree extension remains installed (#681).
+- Corrected the generated-output inventory policy for the retired `new-project` helper (#689).
 
 [Unreleased]: https://github.com/vixygrey/vixygrey-dev-setup/compare/v8.4.0...HEAD
 
