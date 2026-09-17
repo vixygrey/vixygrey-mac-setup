@@ -30,15 +30,18 @@ inventoried="$(mktemp)"
 trap 'rm -f "$declared" "$inventoried"' EXIT
 
 perl -ne '
-    while (/(write_managed_script|write_managed|write_generated|write_seed_once|merge_json_defaults|remove_superseded_managed)\s+"([^"]+)"/g) {
+    while (/(write_managed_script|write_managed|write_generated|write_seed_once|merge_json_defaults|remove_managed_script|remove_superseded_managed)\s+"([^"]+)"/g) {
         %policy = (
             write_managed => "managed",
             write_managed_script => "managed-script",
             write_generated => "generated",
             write_seed_once => "seed",
             merge_json_defaults => "merged",
+            remove_managed_script => "superseded",
             remove_superseded_managed => "superseded"
         );
+        # Skip runtime loop variables. The static inventory cannot name them.
+        next if $2 =~ /\$_/;
         print "$2|$policy{$1}\n";
     }
 ' "$SCRIPT" | sort -u > "$declared"
