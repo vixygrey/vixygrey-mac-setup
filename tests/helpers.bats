@@ -1225,6 +1225,19 @@ EOF
     [ "$status" -ne 0 ]
 }
 
+
+@test "unchecked verification targets name a blocker (#684)" {
+    run awk -F'|' '
+        /"unchecked\|/ {
+            row = $0
+            sub(/.*"unchecked\|/, "", row)
+            sub(/".*/, "", row)
+            count = split(row, fields, "|")
+            if (count != 3 || fields[3] == "") print NR ": " row
+        }' "$BATS_TEST_DIRNAME/../scripts/setup-dev-tools-mac.sh"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
 # ---------------------------------------------------------------------------
 # #515: Homebrew's removed node left its global npm tree behind. The sweep
 # selects bin stubs by TARGET, never by name — a name list would go stale, and

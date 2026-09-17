@@ -11,6 +11,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - Added Kiro Todo Tree retirement regression coverage (#683).
 
+### Changed
+- Report a tool-specific blocker for each unchecked `--verify` target (#684).
+
 ### Removed
 - Removed the Kiro Todo Tree extension and its generated defaults (#678).
 - Removed the `new-project` helper, its `nproj` alias, and generated project scaffolding (#685).
