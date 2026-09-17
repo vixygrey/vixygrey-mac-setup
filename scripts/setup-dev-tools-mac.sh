@@ -3143,7 +3143,7 @@ fi
 # That question can only be answered where the tools are installed, which is why
 # this is a script mode and not a CI job (#331).
 #
-# VERIFY_TARGETS rows: mode|label|path|command
+# VERIFY_TARGETS rows: mode|label|path|command-or-reason
 #
 #   validate  Run the tool's own validator with NO path argument. Success proves
 #             the tool found our file at ITS default location and accepted it —
@@ -3159,8 +3159,10 @@ fi
 #             the whole drift class: #329, #332 and the k9s skin were all path
 #             drift, none of them syntax.
 #   absence   Run an assertion that a retired tool artifact is absent.
+#   unchecked The final field names the blocker. Do not replace that reason with a
+#             file-existence probe, which cannot prove the tool reads the output.
 #
-# The command field may contain '|' — `read` puts the remainder in the last var.
+# The final field can contain `|`; `read` puts the remainder in the last variable.
 if [[ "$VERIFY" == "true" ]]; then
     echo ""
     echo -e "${BOLD}${CYAN}Verifying generated config against the installed tools${NC}"
@@ -3215,17 +3217,13 @@ if [[ "$VERIFY" == "true" ]]; then
         "validate|lnav|${XDG_CONFIG_HOME:-$HOME/.config}/lnav/configs/dev-setup/dracula-sakura.json|_verify_lnav"
         "validate|kitty|$HOME/.config/kitty/kitty.conf|_verify_kitty"
         "validate|zellij|$HOME/.config/zellij/config.kdl|_verify_output_has 'Well defined' zellij setup --check"
-        # Kiro exposes no headless config validator. CI parses the settings,
-        # extension manifest, and theme files.
-        "unchecked|Kiro settings|$HOME/Library/Application Support/Kiro/User/settings.json|"
-        "unchecked|Kiro theme|$HOME/.kiro/extensions/vixygrey.dracula-sakura-1.0.0/themes/dracula-sakura-color-theme.json|"
+        "unchecked|Kiro settings|$HOME/Library/Application Support/Kiro/User/settings.json|Kiro has no settings readback command"
+        "unchecked|Kiro theme|$HOME/.kiro/extensions/vixygrey.dracula-sakura-1.0.0/themes/dracula-sakura-color-theme.json|Kiro has no theme-path or selected-theme readback"
         "absence|kiro||_verify_kiro_retired_extensions"
-        # Yazi has no headless validator or command that reports its config path.
-        # Both TOML files carry official schema links for editor validation.
-        "unchecked|yazi|$HOME/.config/yazi/theme.toml|"
-        "unchecked|eilmeldung|$HOME/.config/eilmeldung/config.toml|"
-        "unchecked|spotatui|$HOME/.config/spotatui/config.yml|"
-        "unchecked|cfait|$HOME/.config/cfait/config.toml|"
+        "unchecked|yazi|$HOME/.config/yazi/theme.toml|ya env requires a TTY and does not run in --verify"
+        "unchecked|eilmeldung|$HOME/.config/eilmeldung/config.toml|accepts --config-dir but does not report its default config path"
+        "unchecked|spotatui|$HOME/.config/spotatui/config.yml|accepts --config but does not report its default config path"
+        "unchecked|cfait|$HOME/.config/cfait/config.toml|accepts --root but does not report its default config path"
         "path|posting|$HOME/.config/posting/config.yaml|posting locate config 2>/dev/null | sed -n '\$p'"
         "validate|ngrok|$HOME/Library/Application Support/ngrok/ngrok.yml|ngrok config check"
         "template|borgmatic|$HOME/.config/borgmatic/config.yaml|borgmatic config validate"
@@ -3237,14 +3235,13 @@ if [[ "$VERIFY" == "true" ]]; then
         # configuration because their exit codes alone cannot prove that the file loaded.
         "validate|starship|$HOME/.config/starship.toml|_verify_starship"
         "validate|topgrade|$HOME/.config/topgrade.toml|_verify_topgrade"
-        "unchecked|trippy|$HOME/.config/trippy/trippy.toml|"
+        "unchecked|trippy|$HOME/.config/trippy/trippy.toml|prints supported theme keys but not resolved values"
         "path|harlequin|$HOME/.harlequin.toml|_verify_harlequin_config"
-        "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|"
-        "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|"
-        "unchecked|micro|$HOME/.config/micro/settings.json|"
-        "unchecked|croft|$HOME/.config/croft/config.json|"
-        # Emeraldian exposes no headless config validator or path command.
-        "unchecked|emeraldian|$HOME/Library/Application Support/emeraldian/config.toml|"
+        "unchecked|gh-dash|$HOME/.config/gh-dash/config.yml|documents XDG lookup but does not report its loaded path"
+        "unchecked|lazydocker|$HOME/.config/lazydocker/config.yml|--config prints built-in defaults, not the active configuration"
+        "unchecked|micro|$HOME/.config/micro/settings.json|-options prints compiled defaults, not settings.json"
+        "unchecked|croft|$HOME/.config/croft/config.json|has no config path or effective-settings command"
+        "unchecked|emeraldian|$HOME/Library/Application Support/emeraldian/config.toml|has no config path or effective-settings command"
         # The remaining path checks ask each tool where it reads, so every row stays
         # correct if the tool moves. This follows the "ask the tool; do not hardcode" rule
         # in AGENTS. The captured path is tilde-normalised on both sides before
@@ -3388,7 +3385,7 @@ if [[ "$VERIFY" == "true" ]]; then
                 fi
                 ;;
             unchecked)
-                printf "  ${DIM}%-12s %s — no validator and no way to ask; syntax only (CI)${NC}\n" "UNVERIFIED" "$label"
+                printf "  ${DIM}%-12s %s — %s; syntax only (CI)${NC}\n" "UNVERIFIED" "$label" "$cmd"
                 ((VERIFY_GAP++))
                 ;;
             *)
