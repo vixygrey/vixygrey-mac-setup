@@ -3727,7 +3727,6 @@ if ! git config --global core.pager | grep -q delta 2>/dev/null; then
     git_global core.pager delta
     git_global delta.navigate true
     git_global delta.side-by-side true
-    git_global merge.conflictstyle diff3
     configured "delta configured as git pager"
 fi
 
@@ -5181,6 +5180,8 @@ for _git_setting in \
     "rebase.autoStash|true" \
     "rerere.enabled|true" \
     "interactive.diffFilter|delta --color-only" \
+    "help.autocorrect|5" \
+    "merge.conflictstyle|diff3" \
     "commit.template|$HOME/.gitmessage"; do
     _git_key="${_git_setting%%|*}"
     _git_value="${_git_setting#*|}"
@@ -5204,7 +5205,6 @@ unset -f retire_generator_git_aliases
 # Display preferences. These affect only explicit Git output, not repository workflow.
 git_global diff.algorithm histogram
 git_global commit.verbose true
-git_global help.autocorrect 5
 git_global column.ui auto
 git_global branch.sort -committerdate
 configured "Git defaults configured (main branch and display preferences)"
