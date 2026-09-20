@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 - Report a tool-specific blocker for each unchecked `--verify` target (#684).
+- Improved deterministic coding-agent shell behavior and archived the former global OMP instructions (#694).
 
 ### Removed
 - Removed the Kiro Todo Tree extension and its generated defaults (#678).

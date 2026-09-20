@@ -154,3 +154,34 @@ teardown() {
     [[ "$output" == *"mise=1"* ]]
     [[ "$output" == *"path=$SHELL_TEST_HOME/mise-bin:"*":$SHELL_TEST_HOME/later-bin:"* ]]
 }
+
+@test "agent shells use plain output and skip human shell initialization (#694)" {
+    printf '%s\n' '#!/bin/sh' 'printf "%s\n" "export STARSHIP_LOADED=1"' > "$SHELL_TEST_BIN/starship"
+    printf '%s\n' '#!/bin/sh' 'printf "%s\n" "export ATUIN_LOADED=1"' > "$SHELL_TEST_BIN/atuin"
+    chmod +x "$SHELL_TEST_BIN/starship" "$SHELL_TEST_BIN/atuin"
+    printf '%s\n' 'export FZF_LOADED=1' > "$SHELL_TEST_HOME/.fzf.zsh"
+
+    run env -i \
+        AI_AGENT=1 \
+        HOME="$SHELL_TEST_HOME" \
+        PATH="$SHELL_TEST_BIN:/usr/bin:/bin" \
+        zsh -dfic '
+            source "$1"
+            print -r -- "git-pager=$GIT_PAGER"
+            print -r -- "pager=$PAGER"
+            print -r -- "prompt=$GIT_TERMINAL_PROMPT"
+            print -r -- "color=$NO_COLOR"
+            print -r -- "starship=${STARSHIP_LOADED-unset}"
+            print -r -- "atuin=${ATUIN_LOADED-unset}"
+            print -r -- "fzf=${FZF_LOADED-unset}"
+        ' zsh "$GENERATED_ZSHRC"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"git-pager=cat"* ]]
+    [[ "$output" == *"pager=cat"* ]]
+    [[ "$output" == *"prompt=0"* ]]
+    [[ "$output" == *"color=1"* ]]
+    [[ "$output" == *"starship=unset"* ]]
+    [[ "$output" == *"atuin=unset"* ]]
+    [[ "$output" == *"fzf=unset"* ]]
+}
