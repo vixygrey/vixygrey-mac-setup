@@ -338,4 +338,3 @@ Give the rule number, the offending text, and a compliant rewrite. Cite only rul
 numbers that appear above. End the report with this statement: "No tool can guarantee
 ASD-STE100 compliance. Final approval rests with the writer. The official standard is
 a free download at asd-ste100.org."
-
