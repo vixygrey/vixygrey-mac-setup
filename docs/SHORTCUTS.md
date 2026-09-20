@@ -110,6 +110,7 @@ Quick reference for the shell shortcuts, terminal keys, Git aliases, recipes, an
 | `pstats` | `project-stats` | Show repo counts, disk usage |
 | `cleandl` | `clean-downloads` | Delete old files from ~/Downloads |
 | `hc` | `health-check` | System health overview |
+| `agent-check` | `agent-check` | Verify coding-agent shell readiness |
 | `sshsetup` | `setup-ssh` | Generate SSH key + add to GitHub |
 | `brewsnap` | `export-brewfile` | Export Brewfile snapshot |
 
